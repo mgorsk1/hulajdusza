@@ -1,0 +1,60 @@
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --primary: 240 5.9% 10%;
+  --primary-foreground: 0 0% 98%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --border: 240 5.9% 90%;
+  --ring: 240 5.9% 10%;
+  --danger: 0 72% 45%;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --border: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
+    --danger: 0 84% 65%;
+  }
+}
+:root[data-theme="dark"] {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --border: 240 3.7% 15.9%;
+  --ring: 240 4.9% 83.9%;
+  --danger: 0 84% 65%;
+}
+* { font-family: 'Inter', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
+.text-muted { color: hsl(var(--muted-foreground)); }
+.bg-muted { background-color: hsl(var(--muted)); }
+.bg-card { background-color: hsl(var(--card)); }
+.border-default { border-color: hsl(var(--border)); }
+.bg-primary { background-color: hsl(var(--primary)); }
+.text-primary-foreground { color: hsl(var(--primary-foreground)); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, label:focus-visible {
+  outline: 2px solid hsl(var(--ring)); outline-offset: 2px;
+}
+button:disabled { opacity: .4; pointer-events: none; }
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; height:3.25rem; padding:0 1.5rem;
+  font-size:.9375rem; font-weight:500; border-radius:.5rem; cursor:pointer; transition:opacity .15s, background-color .15s; width:100%; }
+.btn-primary { background-color:hsl(var(--primary)); color:hsl(var(--primary-foreground)); }
+.btn-primary:hover { opacity:.9; }
+.btn-secondary { border:1px solid hsl(var(--border)); }
+.btn-secondary:hover { background-color:hsl(var(--muted)); }
+.field { height:2.75rem; padding:0 .75rem; width:100%; border-radius:.5rem; border:1px solid hsl(var(--border));
+  background:hsl(var(--background)); font-size:1rem; }
+.dot { width:.75rem; height:.75rem; border-radius:9999px; display:inline-block; flex:none; box-shadow:0 0 0 1.5px hsl(var(--background)), 0 0 0 2.5px hsl(var(--border)); }
+.text-danger { color: hsl(var(--danger)); }

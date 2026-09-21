@@ -1,0 +1,91 @@
+version: "3"
+
+tasks:
+  default:
+    desc: Lista zadań
+    cmds:
+      - task --list
+    silent: true
+
+  install:
+    desc: Zainstaluj zależności
+    cmds:
+      - npm install
+
+  dev:
+    desc: Uruchom lokalnie z przykładowymi danymi (schemat + seed, potem serwer)
+    cmds:
+      - task: db:seed
+      - npx wrangler dev
+
+  dev:empty:
+    desc: Uruchom lokalnie na pustej bazie (bez przykładowych danych)
+    cmds:
+      - task: db:local
+      - npx wrangler dev
+
+  typecheck:
+    desc: Sprawdź typy TypeScript
+    cmds:
+      - npm run typecheck
+
+  db:create:
+    desc: Utwórz bazę D1 (potem wpisz database_id do wrangler.jsonc)
+    cmds:
+      - npx wrangler d1 create hulajdusza
+
+  db:local:
+    desc: Zastosuj schemat w lokalnej bazie D1
+    cmds:
+      - npx wrangler d1 execute hulajdusza --local --file=schema.sql
+
+  db:seed:
+    desc: Wczytaj przykładowe dane do lokalnej bazy (seed.sql, idempotentne). Nie uruchamiaj przy działającym dev
+    cmds:
+      - task: db:local
+      - npx wrangler d1 execute hulajdusza --local --file=seed.sql
+      - npx wrangler d1 execute hulajdusza --local --file=rebuild-stats.sql
+
+  db:reset:
+    desc: Wyczyść lokalną bazę (usuwa wszystkie zgłoszenia). Nie uruchamiaj przy działającym dev
+    cmds:
+      - task: db:local
+      - npx wrangler d1 execute hulajdusza --local --command "DELETE FROM reports"
+
+  db:rebuild-stats:
+    desc: Odbuduj agregaty statystyk z tabeli reports (lokalnie)
+    cmds:
+      - npx wrangler d1 execute hulajdusza --local --file=rebuild-stats.sql
+
+  db:rebuild-stats:remote:
+    desc: Odbuduj agregaty statystyk z tabeli reports (produkcja) – backfill po wdrożeniu na istniejącą bazę
+    prompt: Przeliczyć agregaty statystyk w produkcyjnej bazie?
+    cmds:
+      - npx wrangler d1 execute hulajdusza --remote --file=rebuild-stats.sql
+
+  db:remote:
+    desc: Zastosuj schemat w produkcyjnej bazie D1
+    prompt: Zmienić schemat produkcyjnej bazy D1?
+    cmds:
+      - npx wrangler d1 execute hulajdusza --remote --file=schema.sql
+
+  db:query:
+    desc: "Zapytanie SQL do lokalnej bazy: task db:query -- 'SELECT * FROM reports'"
+    cmds:
+      - npx wrangler d1 execute hulajdusza --local --command "{{.CLI_ARGS}}"
+
+  secret:turnstile:
+    desc: Ustaw sekret Turnstile na produkcji
+    cmds:
+      - npx wrangler secret put TURNSTILE_SECRET
+
+  deploy:
+    desc: Wdróż na Cloudflare Workers
+    deps: [typecheck]
+    cmds:
+      - npx wrangler deploy
+
+  logs:
+    desc: Podgląd logów produkcyjnych
+    cmds:
+      - npx wrangler tail

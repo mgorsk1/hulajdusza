@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <script src="/theme.js"></script>
+  <title>Hulajdusza – zgłoś źle zaparkowaną hulajnogę</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="sticky top-0 z-50 border-b border-default bg-[hsl(var(--background))]/95 backdrop-blur">
+    <div class="max-w-md mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="text-base font-bold tracking-tight">Hulajdusza</a>
+      <nav class="flex items-center gap-4 whitespace-nowrap">
+        <a href="/" class="text-sm font-medium">Zgłoś</a>
+        <a href="/map" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Mapa</a>
+        <a href="/stats" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Statystyki</a>
+        <button type="button" data-theme-toggle class="grid place-items-center w-10 h-10 -mr-2 text-muted hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Zmień motyw"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-md w-full mx-auto px-6 py-10">
+    <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+
+    <!-- Start -->
+    <section id="v-start" class="space-y-8">
+      <div class="space-y-3">
+        <h1 class="text-3xl font-bold tracking-tight whitespace-nowrap">Źle zaparkowana?</h1>
+        <p class="text-muted leading-relaxed">Hulajnoga blokuje chodnik, przejście albo przejazd – lub po prostu stoi tam, gdzie nie powinna. Zrób zdjęcie i zeskanuj kod QR, a zgłoszenie wyślemy do operatora.</p>
+      </div>
+      <ol class="space-y-2 text-sm text-muted">
+        <li>1. Zdjęcie hulajnogi</li>
+        <li>2. Kod QR</li>
+        <li>3. Wyślij</li>
+      </ol>
+      <button id="start" class="btn btn-primary">Zrób zdjęcie</button>
+      <p id="loc-start" class="text-sm text-muted"></p>
+    </section>
+
+    <!-- Skan QR -->
+    <section id="v-scan" class="hidden space-y-6">
+      <div class="space-y-2">
+        <h2 class="text-2xl font-semibold tracking-tight">Zeskanuj kod QR</h2>
+        <p class="text-sm text-muted">Skieruj aparat na kod na kierownicy.</p>
+      </div>
+      <div class="relative aspect-square overflow-hidden rounded-lg border border-default bg-muted">
+        <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline muted></video>
+        <div class="absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none"></div>
+      </div>
+      <p id="scan-msg" class="text-sm text-muted"></p>
+      <div class="space-y-3">
+        <button id="manual" class="btn btn-secondary">Wpisz ręcznie</button>
+        <button id="scan-cancel" class="btn text-muted">Anuluj</button>
+      </div>
+    </section>
+
+    <!-- Ręcznie -->
+    <section id="v-manual" class="hidden space-y-6">
+      <h2 class="text-2xl font-semibold tracking-tight">Dane hulajnogi</h2>
+      <div class="space-y-4">
+        <label class="block space-y-2">
+          <span class="text-sm font-medium">Operator</span>
+          <select id="m-op" class="field"></select>
+        </label>
+        <label class="block space-y-2">
+          <span class="text-sm font-medium">Numer hulajnogi</span>
+          <input id="m-id" class="field" autocomplete="off" autocapitalize="characters" placeholder="np. 123456">
+        </label>
+      </div>
+      <div class="space-y-3">
+        <button id="m-ok" class="btn btn-primary">Dalej</button>
+        <button id="m-back" class="btn text-muted">Wróć do skanera</button>
+      </div>
+    </section>
+
+    <!-- Podsumowanie -->
+    <section id="v-review" class="hidden space-y-8">
+      <h2 class="text-2xl font-semibold tracking-tight">Gotowe do wysłania</h2>
+      <ul id="list" class="space-y-3"></ul>
+      <button id="add" class="btn btn-secondary">+ Kolejna hulajnoga</button>
+      <div class="space-y-3 pt-2 border-t border-default">
+        <p id="loc-review" class="text-sm text-muted pt-4"></p>
+        <div id="ts"></div>
+        <p id="err" class="hidden text-sm text-danger"></p>
+        <button id="send" class="btn btn-primary" disabled>Wyślij zgłoszenie</button>
+      </div>
+    </section>
+
+    <!-- Sukces -->
+    <section id="v-done" class="hidden space-y-8">
+      <div class="space-y-3">
+        <h2 class="text-3xl font-bold tracking-tight">Wysłane</h2>
+        <p id="done-msg" class="text-muted leading-relaxed"></p>
+      </div>
+      <div class="space-y-3">
+        <a href="/map" class="btn btn-secondary">Zobacz mapę zgłoszeń</a>
+        <button id="again" class="btn btn-primary">Nowe zgłoszenie</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-default">
+    <div class="max-w-md mx-auto px-6 py-6">
+      <p class="text-xs text-muted">Zdjęć i kodów nie przechowujemy – trafiają tylko do operatora. Zapisujemy wyłącznie statystyki zgłoszenia.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

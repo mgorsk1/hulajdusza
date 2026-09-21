@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hulajdusza",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "hulajdusza",
+      // wstaw ID po `wrangler d1 create hulajdusza`
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  // Cloudflare Email Service (wysyłka do dowolnych odbiorców; domena nadawcy musi być zweryfikowana)
+  "send_email": [{ "name": "EMAIL" }],
+  "vars": {
+    // Klucz testowy Turnstile (zawsze przechodzi). Na produkcji podmień na własny.
+    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
+    // true = maile tylko logowane (nic nie wychodzi). Ustaw "false" po skonfigurowaniu maili.
+    // Cache /api/stats na krawędzi (sekundy). Lokalnie wyłączony przez .dev.vars.
+    "STATS_CACHE_TTL": "60",
+    "EMAIL_DRY_RUN": "true",
+    "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
+    // UZUPEŁNIJ i zweryfikuj adresy zgłoszeniowe operatorów przed wyłączeniem DRY_RUN
+    "OPERATOR_EMAILS": "{\"lime\":\"lime@example.com\",\"bolt\":\"bolt@example.com\",\"dott\":\"dott@example.com\",\"voi\":\"voi@example.com\",\"tier\":\"tier@example.com\",\"hive\":\"hive@example.com\",\"uber\":\"uber@example.com\"}"
+  },
+  "observability": { "enabled": true }
+}

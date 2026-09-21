@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <script src="/theme.js"></script>
+  <title>Statystyki – Hulajdusza</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* Dzielnice: 8-stopniowa skala szarości, równe kroki jasności CIELAB (~12 L*), niemal pełny zakres.
+       g1 = największa dzielnica, g8 = „Pozostałe”. */
+    .viz-root { --g1: #000000; --g2: #202020; --g3: #3a3a3a; --g4: #575757; --g5: #757575; --g6: #949494; --g7: #b5b5b5; --g8: #d7d7d7; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .viz-root { --g1: #ffffff; --g2: #dfdfdf; --g3: #c0c0c0; --g4: #a2a2a2; --g5: #858585; --g6: #696969; --g7: #4e4e4e; --g8: #353535; }
+    }
+    :root[data-theme="dark"] .viz-root { --g1: #ffffff; --g2: #dfdfdf; --g3: #c0c0c0; --g4: #a2a2a2; --g5: #858585; --g6: #696969; --g7: #4e4e4e; --g8: #353535; }
+    /* Trend na odwróconym kafelku 24 h: jasny motyw = ciemny kafelek (jaśniejsze odcienie), ciemny motyw = jasny kafelek (ciemniejsze) */
+    .viz-root { --trend-bad: #f87171; --trend-good: #4ade80; }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .viz-root { --trend-bad: #b91c1c; --trend-good: #15803d; }
+    }
+    :root[data-theme="dark"] .viz-root { --trend-bad: #b91c1c; --trend-good: #15803d; }
+    .trend-bad { color: var(--trend-bad); }
+    .trend-good { color: var(--trend-good); }
+    .viz-root svg { display: block; max-width: 100%; overflow: visible; }
+    .t-fg { fill: hsl(var(--foreground)); }
+    .t-muted { fill: hsl(var(--muted-foreground)); }
+    .axis { stroke: hsl(var(--border)); stroke-width: 1; }
+    .gridline { stroke: hsl(var(--danger)); stroke-width: 1; stroke-dasharray: 4 4; }
+    .t-danger { fill: hsl(var(--danger)); font-weight: 600; }
+    [data-tip] { cursor: default; }
+    [data-tip]:hover .mark { opacity: .75; }
+    #tip { position: fixed; z-index: 100; pointer-events: none; max-width: 240px; font-size: 12px; line-height: 1.4;
+      padding: 6px 10px; border-radius: .5rem; border: 1px solid hsl(var(--border));
+      background: hsl(var(--card)); color: hsl(var(--foreground)); box-shadow: 0 4px 12px rgb(0 0 0 / .08); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="sticky top-0 z-50 border-b border-default bg-[hsl(var(--background))]/95 backdrop-blur">
+    <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="text-base font-bold tracking-tight">Hulajdusza</a>
+      <nav class="flex items-center gap-4 whitespace-nowrap">
+        <a href="/" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Zgłoś</a>
+        <a href="/map" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Mapa</a>
+        <a href="/stats" class="text-sm font-medium">Statystyki</a>
+        <button type="button" data-theme-toggle class="grid place-items-center w-10 h-10 -mr-2 text-muted hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Zmień motyw"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-10 space-y-6 viz-root">
+    <h1 class="text-3xl font-bold tracking-tight pb-2">Statystyki</h1>
+
+    <!-- Trzy metryki w jednym rzędzie, kafelki 16:9 -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6" aria-label="Kluczowe metryki">
+      <article class="md:aspect-video p-4 rounded-lg bg-primary text-primary-foreground flex flex-col">
+        <p class="text-sm md:text-xs opacity-70">Ostatnie 24 godziny</p>
+        <div class="flex items-end justify-between gap-3 mt-auto pt-3">
+          <div>
+            <p id="m24" class="text-5xl font-bold tracking-tight leading-none">–</p>
+            <p id="m24-unit" class="text-sm md:text-xs opacity-70 mt-2">hulajnóg</p>
+          </div>
+          <p id="m24-trend" class="text-xs font-semibold text-right whitespace-nowrap self-start"></p>
+        </div>
+      </article>
+
+      <article class="md:aspect-video p-4 rounded-lg border border-default bg-card flex flex-col">
+        <p class="text-sm md:text-xs text-muted">Lider operatorów</p>
+        <p class="flex-1 flex items-center gap-2 py-2 text-2xl font-bold tracking-tight leading-tight"><span id="lead-dot" class="dot"></span><span id="lead-name">–</span></p>
+        <p id="lead-sub" class="text-sm md:text-xs text-muted"></p>
+      </article>
+
+      <article class="md:aspect-video p-4 rounded-lg border border-default bg-card flex flex-col">
+        <p class="text-sm md:text-xs text-muted">Najgorsza dzielnica</p>
+        <p id="dist-name" class="flex-1 flex items-center py-2 text-2xl font-bold tracking-tight leading-tight">–</p>
+        <p id="dist-sub" class="text-sm md:text-xs text-muted"></p>
+      </article>
+    </section>
+
+    <!-- Ostatnie 30 dni -->
+    <article class="p-6 rounded-lg border border-default bg-card">
+      <h2 class="font-semibold">Ostatnie 30 dni</h2>
+      <p class="text-sm text-muted mb-6 whitespace-nowrap">Hulajnogi dziennie · pełne dni</p>
+      <div id="c-day"></div>
+    </article>
+
+    <!-- Donuty -->
+    <section class="grid md:grid-cols-2 gap-6">
+      <article class="p-6 rounded-lg border border-default bg-card">
+        <h2 class="font-semibold">Hulajnogi wg operatora</h2>
+        <p class="text-sm text-muted mb-6">Udział w zgłoszonych hulajnogach</p>
+        <div id="c-op"></div>
+      </article>
+
+      <article class="p-6 rounded-lg border border-default bg-card">
+        <h2 class="font-semibold">Hulajnogi wg dzielnicy</h2>
+        <p class="text-sm text-muted mb-6">Udział w zgłoszonych hulajnogach</p>
+        <div id="c-dist"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="border-t border-default">
+    <div class="max-w-3xl mx-auto px-6 py-6">
+      <p class="text-xs text-muted">Jedyna miara: liczba zgłoszonych hulajnóg. Dane odświeżają się co minutę. Dzielnica ustalana automatycznie na podstawie lokalizacji.</p>
+    </div>
+  </footer>
+
+  <div id="tip" hidden></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const plural = (n, one, few, many) =>
+      n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14) ? few : many;
+    const scootersWord = (n) => `${n} ${plural(n, "hulajnoga", "hulajnogi", "hulajnóg")}`;
+
+    let cfg, data;
+
+    /* ---------- Tooltip (delegacja; mysz i dotyk) ---------- */
+    const tip = $("tip");
+    function placeTip(e) {
+      const pad = 12, r = tip.getBoundingClientRect();
+      let x = e.clientX + pad, y = e.clientY + pad;
+      if (x + r.width > innerWidth - 8) x = e.clientX - r.width - pad;
+      if (y + r.height > innerHeight - 8) y = e.clientY - r.height - pad;
+      tip.style.left = Math.max(8, x) + "px";
+      tip.style.top = Math.max(8, y) + "px";
+    }
+    document.addEventListener("pointermove", (e) => {
+      const t = e.target.closest?.("[data-tip]");
+      if (!t) return void (tip.hidden = true);
+      tip.textContent = t.dataset.tip;
+      tip.hidden = false;
+      placeTip(e);
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!e.target.closest?.("[data-tip]")) tip.hidden = true;
+    });
+    document.addEventListener("scroll", () => (tip.hidden = true), { passive: true });
+
+    const empty = (msg) => `<p class="text-sm text-muted py-8 text-center">${msg}</p>`;
+
+    /* ---------- Metryka 24 h ---------- */
+    function metric() {
+      const m = data.last24h;
+      $("m24").textContent = m.scooters;
+      $("m24-unit").textContent = plural(m.scooters, "hulajnoga", "hulajnogi", "hulajnóg");
+
+      // Więcej źle zaparkowanych hulajnóg = gorzej (czerwony), mniej = lepiej (zielony)
+      const tr = $("m24-trend");
+      let text, cls = "";
+      if (!m.previous && !m.scooters) text = "= bez zmian";
+      else if (!m.previous) (text = "▲ wcześniej brak"), (cls = "trend-bad");
+      else {
+        const d = Math.round(((m.scooters - m.previous) / m.previous) * 100);
+        if (d > 0) (text = `▲ +${d}%`), (cls = "trend-bad");
+        else if (d < 0) (text = `▼ ${d}%`), (cls = "trend-good");
+        else text = "= 0%";
+      }
+      tr.className = `text-xs font-semibold text-right whitespace-nowrap ${cls}`;
+      tr.textContent = text;
+      tr.title = "względem poprzednich 24 godzin";
+    }
+
+    /* ---------- Lider operatorów (łącznie) ---------- */
+    function leader() {
+      const lead = data.byOperator[0];
+      const op = lead && cfg.operators.find((o) => o.key === lead.operator);
+      if (!op) return;
+      const total = data.byOperator.reduce((s, r) => s + r.scooters, 0);
+      $("lead-name").textContent = op.name;
+      $("lead-dot").style.background = isDark() ? op.dark : op.color;
+      $("lead-sub").textContent = `${scootersWord(lead.scooters)} · ${Math.round((lead.scooters / total) * 100)}% łącznie`;
+    }
+
+    /* ---------- Najgorsza dzielnica (łącznie) ---------- */
+    function worstDistrict() {
+      const rows = data.byDistrict.filter((r) => r.district !== "Nieustalona");
+      const top = rows[0];
+      if (!top) return;
+      const total = data.byDistrict.reduce((s, r) => s + r.scooters, 0);
+      $("dist-name").textContent = top.district;
+      $("dist-sub").textContent = `${scootersWord(top.scooters)} · ${Math.round((top.scooters / total) * 100)}% łącznie`;
+    }
+
+    /* ---------- Donut (udział %) ---------- */
+    // rows: [{ name, n, color }]; kolor podąża za bytem (operator / dzielnica), nie za pozycją w rankingu
+    function donut(el, rows, label) {
+      const total = rows.reduce((s, r) => s + r.n, 0);
+      if (!total) return void (el.innerHTML = empty("Brak danych."));
+
+      const pct = (n) => { const p = (n / total) * 100; return p < 1 ? "<1%" : Math.round(p) + "%"; };
+      const S = 200, c = S / 2, R = 96, r0 = 62;
+      const pt = (rad, a) => [(c + rad * Math.cos(a)).toFixed(2), (c + rad * Math.sin(a)).toFixed(2)];
+      let a0 = -Math.PI / 2, paths = "";
+      for (const row of rows.filter((r) => r.n > 0)) {
+        const a1 = a0 + Math.min((row.n / total) * 2 * Math.PI, 2 * Math.PI - 0.0001), big = a1 - a0 > Math.PI ? 1 : 0;
+        const [x0, y0] = pt(R, a0), [x1, y1] = pt(R, a1), [x2, y2] = pt(r0, a1), [x3, y3] = pt(r0, a0);
+        paths += `<g data-tip="${esc(`${row.name}: ${scootersWord(row.n)} (${pct(row.n)})`)}"><path class="mark" fill="${row.color}" stroke="hsl(var(--card))" stroke-width="2" d="M${x0} ${y0}A${R} ${R} 0 ${big} 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 ${big} 0 ${x3} ${y3}Z"/></g>`;
+        a0 = a1;
+      }
+      const svg = `<svg viewBox="0 0 ${S} ${S}" width="${S}" height="${S}" class="mx-auto" role="img" aria-label="${esc(label)}">${paths}
+        <text class="t-fg" x="${c}" y="${c + 4}" text-anchor="middle" font-size="28" font-weight="700">${total}</text>
+        <text class="t-muted" x="${c}" y="${c + 22}" text-anchor="middle" font-size="11">${plural(total, "hulajnoga", "hulajnogi", "hulajnóg")}</text></svg>`;
+      const legend = `<ul class="mt-6 space-y-2 text-sm">${rows
+        .filter((r) => r.n > 0)
+        .map((r) => `<li class="flex items-center gap-3" data-tip="${esc(`${r.name}: ${scootersWord(r.n)}`)}"><span class="dot" style="background:${r.color}"></span><span class="flex-1 truncate">${esc(r.name)}</span><span class="text-muted tabular-nums">${pct(r.n)}</span></li>`)
+        .join("")}</ul>`;
+      el.innerHTML = svg + legend;
+    }
+
+    function operatorDonut() {
+      const by = Object.fromEntries(data.byOperator.map((r) => [r.operator, r.scooters]));
+      const rows = cfg.operators.map((o) => ({ name: o.name, n: by[o.key] ?? 0, color: isDark() ? o.dark : o.color })).sort((a, b) => b.n - a.n);
+      donut($("c-op"), rows, "Hulajnogi wg operatora");
+    }
+
+    function districtDonut() {
+      const named = data.byDistrict.filter((r) => r.district !== "Nieustalona");
+      const unknown = data.byDistrict.filter((r) => r.district === "Nieustalona").reduce((s, r) => s + r.scooters, 0);
+      const rows = named.slice(0, 7).map((r) => ({ name: r.district, n: r.scooters }));
+      const rest = named.slice(7).reduce((s, r) => s + r.scooters, 0) + unknown;
+      if (rest) rows.push({ name: "Pozostałe", n: rest });
+      // 8 poziomów szarości; przy mniejszej liczbie plasterków rozkładamy je równomiernie na całej skali
+      const LEVELS = 8;
+      rows.forEach((r, i) => {
+        const level = rows.length === 1 ? 1 : Math.round((i * (LEVELS - 1)) / (rows.length - 1)) + 1;
+        r.color = `var(--g${level})`;
+      });
+      donut($("c-dist"), rows, "Hulajnogi wg dzielnicy");
+    }
+
+    /* ---------- Ostatnie 30 dni ---------- */
+    function dailyBars() {
+      const el = $("c-day");
+      const [y, m, d] = data.today.split("-").map(Number);
+      const days = [];
+      for (let i = 30; i >= 1; i--) days.push(new Date(Date.UTC(y, m - 1, d - i)).toISOString().slice(0, 10));
+      const by = Object.fromEntries(data.daily.map((r) => [r.day, r.scooters]));
+      const vals = days.map((k) => by[k] ?? 0);
+      const fmt = (k) => new Date(k + "T12:00:00Z").toLocaleDateString("pl-PL", { day: "numeric", month: "short", timeZone: "UTC" });
+      if (!vals.some(Boolean)) return void (el.innerHTML = empty("Brak danych z ostatnich 30 dni."));
+
+      const W = el.clientWidth || 300, H = 180, top = 16, bot = 24;
+      const ph = H - top - bot, max = Math.max(1, ...vals), band = W / days.length, bw = Math.max(2, Math.min(14, band * 0.6));
+      let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Zgłoszone hulajnogi dziennie w ostatnich 30 pełnych dniach">`;
+      // Przerywana czerwona linia od podpisu do środka najwyższego słupka; wartość po przeciwnej stronie niż szczyt
+      // (szczyt w 2. połowie wykresu -> podpis po lewej, w 1. połowie -> po prawej), żeby nie nachodzić na słupek
+      const peak = vals.indexOf(max), peakX = band * peak + band / 2;
+      const peakInSecondHalf = peak >= days.length / 2;
+      const labelX = peakInSecondHalf ? 0 : W, labelAnchor = peakInSecondHalf ? "start" : "end";
+      const lineX1 = peakInSecondHalf ? 0 : peakX, lineX2 = peakInSecondHalf ? peakX : W;
+      s += `<line class="gridline" x1="${lineX1}" x2="${lineX2}" y1="${top}" y2="${top}"/><text class="t-danger" x="${labelX}" y="${top - 5}" text-anchor="${labelAnchor}" font-size="11">${max}</text>`;
+      s += `<line class="axis" x1="0" x2="${W}" y1="${top + ph}" y2="${top + ph}"/>`;
+      days.forEach((k, i) => {
+        const h = Math.round((vals[i] / max) * ph), x = band * i + (band - bw) / 2, yy = top + ph - h, r = Math.min(2, h / 2);
+        s += `<g data-tip="${esc(`${fmt(k)}: ${scootersWord(vals[i])}`)}"><rect x="${band * i}" y="0" width="${band}" height="${H}" fill="transparent"/>`;
+        if (h > 0) s += `<path class="mark" fill="hsl(var(--foreground))" d="M${x} ${yy + h}V${yy + r}a${r} ${r} 0 0 1 ${r} ${-r}H${x + bw - r}a${r} ${r} 0 0 1 ${r} ${r}V${yy + h}Z"/>`;
+        s += `</g>`;
+      });
+      [[0, "start"], [14, "middle"], [29, "end"]].forEach(([i, anchor]) => {
+        const x = anchor === "start" ? 0 : anchor === "end" ? W : band * i + band / 2;
+        s += `<text class="t-muted" x="${x}" y="${H - 6}" text-anchor="${anchor}" font-size="11">${fmt(days[i])}</text>`;
+      });
+      el.innerHTML = s + "</svg>";
+    }
+
+    const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
+    Promise.all([getJson("/api/config"), getJson("/api/stats")]).then(([c, d]) => {
+      cfg = c;
+      data = d;
+      addEventListener("themechange", () => { operatorDonut(); leader(); });
+      metric();
+      leader();
+      worstDistrict();
+      dailyBars();
+      operatorDonut();
+      districtDonut();
+      let last = innerWidth, t;
+      addEventListener("resize", () => {
+        clearTimeout(t);
+        t = setTimeout(() => { if (innerWidth !== last) { last = innerWidth; dailyBars(); } }, 150);
+      });
+    }).catch((e) => {
+      console.error(e);
+      document.querySelector("main").insertAdjacentHTML("afterbegin", '<p class="text-sm text-danger">Nie udało się wczytać statystyk. Odśwież stronę.</p>');
+    });
+  </script>
+</body>
+</html>
