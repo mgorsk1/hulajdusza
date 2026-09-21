@@ -20,14 +20,14 @@
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
     // Adres nadawcy (domena musi być dodana w Email Service)
-    "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
+    "FROM_EMAIL": "zgloszenia@hulajdusza.mariuszgorski.pl",
     // "false" = maile naprawdę wychodzą. Domyślnie tylko logi (bezpieczne w dev).
     "EMAIL_DRY_RUN": "false",
     // "cloudflare" = Email Service (Workers Paid) albo "resend" = darmowy plan Resend (sekret: wrangler secret put RESEND_API_KEY)
     "MAIL_PROVIDER": "resend",
     // Klucz testowy Turnstile: ZAWSZE wymusza interaktywne potwierdzenie i zawsze przechodzi.
     // Na produkcji podmień na własny klucz i ustaw sekret: task secret:turnstile
-    "TURNSTILE_SITE_KEY": "3x00000000000000000000FF",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAE-7MUVj6yZ_sBg4",
     // Limity zgłoszeń (1 zgłoszenie = 1 mail do operatora). Domyślnie zgodne z darmowym planem Resend.
     "DAILY_LIMIT": "100",
     "MONTHLY_LIMIT": "3000",
