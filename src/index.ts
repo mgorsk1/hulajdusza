@@ -170,7 +170,7 @@ async function geocode(url: URL): Promise<Response> {
 
 async function listReports(env: Env): Promise<Response> {
   const { results } = await env.DB.prepare(
-    "SELECT id, created_at, street, lat, lng, operator, scooter_count FROM reports ORDER BY created_at DESC LIMIT 5000",
+    "SELECT id, created_at, street, lat, lng, operator, scooter_count FROM reports WHERE created_at >= datetime('now', '-7 days') ORDER BY created_at DESC LIMIT 5000",
   ).all();
   return json(results, 200, { "cache-control": "public, max-age=60" });
 }

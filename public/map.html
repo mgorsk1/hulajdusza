@@ -81,44 +81,80 @@
       const ops = Object.fromEntries(cfg.operators.map((o) => [o.key, o]));
       const perOp = {};
       let scooters = 0;
+      let recentReports = 0;
+      let recentScooters = 0;
+      const now = Date.now();
       const features = [];
+
       for (const r of reports) {
         const op = ops[r.operator];
         if (!op) continue;
+        const repTime = new Date(r.created_at).getTime();
+        const ageHours = (now - repTime) / 3600000;
+        const isRecent = ageHours <= 24;
+
+        if (isRecent) {
+          recentReports++;
+          recentScooters += r.scooter_count;
+        }
         scooters += r.scooter_count;
         perOp[r.operator] = (perOp[r.operator] || 0) + r.scooter_count;
+
+        const ageText = isRecent
+          ? (ageHours < 1 ? "przed chwilą" : `${Math.floor(ageHours)} godz. temu`)
+          : `${Math.max(1, Math.floor(ageHours / 24))} dni temu (${new Date(repTime).toLocaleDateString("pl-PL")})`;
+
         features.push({
           type: "Feature",
           geometry: { type: "Point", coordinates: [r.lng, r.lat] },
-          properties: { count: r.scooter_count, color: dark ? op.dark : op.color, name: op.name, street: r.street || "", date: r.created_at },
+          properties: {
+            count: r.scooter_count,
+            color: dark ? op.dark : op.color,
+            name: op.name,
+            street: r.street || "",
+            date: r.created_at,
+            isRecent: isRecent ? 1 : 0,
+            opacity: isRecent ? 0.95 : 0.35,
+            strokeOpacity: isRecent ? 1.0 : 0.4,
+            strokeWidth: isRecent ? 2.0 : 1.0,
+            ageText,
+          },
         });
       }
+
       map.addSource("reports", { type: "geojson", data: { type: "FeatureCollection", features } });
       map.addLayer({
         id: "reports",
         type: "circle",
         source: "reports",
-        layout: { "circle-sort-key": ["-", 0, ["get", "count"]] }, // małe kropki na wierzchu
+        // Najświeższe zgłoszenia (isRecent = 1) renderowane zawsze na wierzchu
+        layout: { "circle-sort-key": ["+", ["*", ["get", "isRecent"], 100], ["get", "count"]] },
         paint: {
-          "circle-radius": ["+", 5, ["*", 4, ["sqrt", ["get", "count"]]]],
+          "circle-radius": ["+", ["case", ["==", ["get", "isRecent"], 1], 6, 4.5], ["*", 3.5, ["sqrt", ["get", "count"]]]],
           "circle-color": ["get", "color"],
-          "circle-opacity": 0.8,
-          "circle-stroke-width": 1.5,
+          "circle-opacity": ["get", "opacity"],
+          "circle-stroke-width": ["get", "strokeWidth"],
           "circle-stroke-color": dark ? "#0a0a0b" : "#ffffff",
+          "circle-stroke-opacity": ["get", "strokeOpacity"],
         },
       });
+
       map.on("click", "reports", (e) => {
         const f = e.features[0];
         const p = f.properties;
+        const badge = p.isRecent
+          ? `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white ml-1.5">ostatnie 24h</span>`
+          : `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground ml-1.5">poprzednie dni</span>`;
         new maplibregl.Popup({ offset: 10 })
           .setLngLat(f.geometry.coordinates)
-          .setHTML(`<strong>${esc(p.name)}</strong> · ${p.count} szt.<br><span style="opacity:.7">${esc(p.street)}<br>${esc(new Date(p.date).toLocaleDateString("pl-PL"))}</span>`)
+          .setHTML(`<div class="space-y-1"><div><strong>${esc(p.name)}</strong> · ${p.count} szt. ${badge}</div><div class="text-xs text-muted leading-tight">${esc(p.street)}<br>${esc(p.ageText)}</div></div>`)
           .addTo(map);
       });
+
       map.on("mouseenter", "reports", () => (map.getCanvas().style.cursor = "pointer"));
       map.on("mouseleave", "reports", () => (map.getCanvas().style.cursor = ""));
 
-      document.getElementById("stats").textContent = `${reports.length} zgłoszeń · ${scooters} hulajnóg`;
+      document.getElementById("stats").innerHTML = `<strong>${recentReports}</strong> w ostatnich 24h <span class="text-muted">(${reports.length} w 7 dni)</span>`;
       document.getElementById("legend").innerHTML = cfg.operators
         .map((o) => `<li class="flex items-center gap-1.5"><span class="dot" style="background:${dark ? o.dark : o.color}"></span>${esc(o.name)}${perOp[o.key] ? ` <span class="text-muted">${perOp[o.key]}</span>` : ""}</li>`)
         .join("");
