@@ -88,18 +88,25 @@
       </div>
       <div class="relative aspect-square overflow-hidden rounded-lg border border-default bg-muted">
         <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline muted></video>
-        <div class="absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none"></div>
+        <div id="scan-frame" class="absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none transition-all duration-300"></div>
       </div>
-      <p id="scan-msg" class="text-sm text-muted"></p>
+      <p id="scan-msg" class="text-sm text-muted min-h-[1.25rem]"></p>
       <div class="space-y-3">
         <button id="manual" class="btn btn-secondary">Wpisz ręcznie</button>
         <button id="scan-cancel" class="btn btn-ghost">Wróć</button>
       </div>
     </section>
 
-    <!-- Ręcznie -->
+    <!-- Ręcznie / Potwierdzenie numeru -->
     <section id="v-manual" class="hidden space-y-6">
-      <h2 class="text-2xl font-semibold tracking-tight">Dane hulajnogi</h2>
+      <div class="space-y-2">
+        <h2 id="m-title" class="text-2xl font-semibold tracking-tight">Dane hulajnogi</h2>
+        <p id="m-desc" class="text-sm text-muted leading-relaxed">Sprawdź, czy numer hulajnogi się zgadza, lub wpisz go ręcznie.</p>
+      </div>
+      <div id="m-thumb-wrap" class="hidden items-center gap-3 p-3 rounded-lg border border-default bg-card">
+        <img id="m-thumb" src="" alt="" class="w-14 h-14 rounded-md object-cover bg-muted flex-none">
+        <p class="text-xs text-muted leading-relaxed">Zdjęcie kodu QR. Sprawdź, czy numer w polu poniżej zgadza się z tabliczką na zdjęciu.</p>
+      </div>
       <div class="space-y-4">
         <label class="block space-y-2">
           <span class="text-sm font-medium">Operator</span>
@@ -107,9 +114,10 @@
         </label>
         <label class="block space-y-2">
           <span class="text-sm font-medium">Numer hulajnogi</span>
-          <input id="m-id" class="field" autocomplete="off" autocapitalize="characters" placeholder="123-456">
+          <input id="m-id" class="field" autocomplete="off" autocapitalize="characters" placeholder="np. RJR-SER lub 123-456">
         </label>
       </div>
+      <p id="err-manual" class="hidden text-sm text-danger"></p>
       <div class="space-y-3">
         <button id="m-ok" class="btn btn-primary">Dalej</button>
         <button id="m-back" class="btn btn-ghost">Wróć</button>

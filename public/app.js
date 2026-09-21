@@ -443,13 +443,17 @@ async function openScanner() {
   current = { status: "scanning", qr: null, docs: [] };
   const mine = current;
   show("scan");
-  $("scan-msg").textContent = "Włączam aparat…";
+  const frame = $("scan-frame");
+  if (frame) {
+    frame.className = "absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none transition-all duration-300";
+  }
+  $("scan-msg").innerHTML = "Włączam aparat…";
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false });
     const v = $("video");
     v.srcObject = stream;
     await v.play();
-    $("scan-msg").textContent = "Szukam kodu QR…";
+    $("scan-msg").innerHTML = "Szukam kodu QR…";
     scanning = true;
     const c = document.createElement("canvas");
     const tick = async () => {
@@ -461,9 +465,21 @@ async function openScanner() {
         c.getContext("2d", { willReadFrequently: true }).drawImage(v, 0, 0, c.width, c.height);
         const code = await decodeCanvas(c);
         if (code && scanning && current === mine) {
-          navigator.vibrate?.(60);
+          scanning = false; // zatrzymaj pętlę detekcji
+          navigator.vibrate?.([40, 30, 60]);
+
+          // Zielona ramka z poświatą i komunikat sukcesu
+          if (frame) {
+            frame.className = "absolute inset-[18%] rounded-lg border-2 border-emerald-400 bg-emerald-500/20 shadow-[0_0_24px_rgba(52,211,153,0.6)] scale-[1.03] pointer-events-none transition-all duration-300 ease-out";
+          }
+          $("scan-msg").innerHTML = `<span class="text-emerald-500 font-medium">✓ Kod odczytany!</span>`;
+
           // Zdjęcie kodu QR = klatka z podglądu w chwili odczytu
           mine.qr = await makePhoto(v);
+
+          // Płynna pauza (~400 ms), by użytkownik zauważył sukces
+          await new Promise((res) => setTimeout(res, 400));
+
           stopScanner();
           return checkCurrent(code, null, mine.qr.blob);
         }
