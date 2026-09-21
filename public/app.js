@@ -1028,7 +1028,7 @@ async function openConfirm() {
     const r = await fetch("/api/preview", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ lat: loc.lat, lng: loc.lng, cc, scooters: scooters.map((s) => ({ code: s.code, operator: s.operator, hasQr: s.hasQr })) }),
+      body: JSON.stringify({ lat: loc.lat, lng: loc.lng, cc, scooters: scooters.map((s) => ({ code: s.code, operator: s.operator, id: s.id, hasQr: s.hasQr })) }),
     });
     const d = await r.json();
     if (r.status === 409) {
@@ -1079,7 +1079,7 @@ $("send").onclick = async () => {
   fd.set("lng", loc.lng);
   fd.set("cc", cc);
   if (whenIso) fd.set("whenIso", whenIso);
-  fd.set("scooters", JSON.stringify(scooters.map((s) => ({ code: s.code, operator: s.operator, hasQr: s.hasQr }))));
+  fd.set("scooters", JSON.stringify(scooters.map((s) => ({ code: s.code, operator: s.operator, id: s.id, hasQr: s.hasQr }))));
   // photo{i}_0 = kod QR (gdy hasQr), dalej dokumentacja
   scooters.forEach((s, i) => s.photos.forEach((p, j) => fd.set(`photo${i}_${j}`, p.blob, `photo${i}_${j}.jpg`)));
 
