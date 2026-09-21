@@ -142,12 +142,9 @@
       map.on("click", "reports", (e) => {
         const f = e.features[0];
         const p = f.properties;
-        const badge = p.isRecent
-          ? `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-500 text-white ml-1.5">ostatnie 24h</span>`
-          : `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted text-muted-foreground ml-1.5">poprzednie dni</span>`;
         new maplibregl.Popup({ offset: 10 })
           .setLngLat(f.geometry.coordinates)
-          .setHTML(`<div class="space-y-1"><div><strong>${esc(p.name)}</strong> · ${p.count} szt. ${badge}</div><div class="text-xs text-muted leading-tight">${esc(p.street)}<br>${esc(p.ageText)}</div></div>`)
+          .setHTML(`<strong>${esc(p.name)}</strong> · ${p.count} szt.<br><span style="opacity:.7">${esc(p.street)}<br>${esc(p.ageText)}</span>`)
           .addTo(map);
       });
 
