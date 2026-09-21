@@ -88,7 +88,13 @@
       </div>
       <div class="relative aspect-square overflow-hidden rounded-lg border border-default bg-muted">
         <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline muted></video>
-        <div id="scan-frame" class="absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none transition-all duration-300"></div>
+        <div id="scan-frame" class="absolute inset-[15%] rounded-2xl border border-white/30 pointer-events-none transition-all duration-300 overflow-hidden">
+          <div id="scan-laser" class="scan-laser"></div>
+          <div class="scan-corner top-0 left-0 border-t-2 border-l-2 rounded-tl-xl"></div>
+          <div class="scan-corner top-0 right-0 border-t-2 border-r-2 rounded-tr-xl"></div>
+          <div class="scan-corner bottom-0 left-0 border-b-2 border-l-2 rounded-bl-xl"></div>
+          <div class="scan-corner bottom-0 right-0 border-b-2 border-r-2 rounded-br-xl"></div>
+        </div>
       </div>
       <p id="scan-msg" class="text-sm text-muted min-h-[1.25rem]"></p>
       <div class="space-y-3">

@@ -230,7 +230,28 @@ async function decodeCanvas(canvas) {
       const r = await detector.detect(canvas);
       if (r[0]?.rawValue) {
         console.log("[QR Decode] BarcodeDetector wykrył kod:", r[0].rawValue);
-        return r[0].rawValue;
+        const b = r[0].boundingBox;
+        let qrBox = null;
+        if (b && b.width > 0 && b.height > 0) {
+          qrBox = {
+            x: (b.x ?? b.left ?? 0) / canvas.width,
+            y: (b.y ?? b.top ?? 0) / canvas.height,
+            w: b.width / canvas.width,
+            h: b.height / canvas.height,
+          };
+        } else if (r[0].cornerPoints?.length >= 4) {
+          const xs = r[0].cornerPoints.map((p) => p.x);
+          const ys = r[0].cornerPoints.map((p) => p.y);
+          const minX = Math.min(...xs), maxX = Math.max(...xs);
+          const minY = Math.min(...ys), maxY = Math.max(...ys);
+          qrBox = {
+            x: minX / canvas.width,
+            y: minY / canvas.height,
+            w: (maxX - minX) / canvas.width,
+            h: (maxY - minY) / canvas.height,
+          };
+        }
+        return { code: r[0].rawValue, qrBox };
       }
     } catch (err) {
       console.warn("[QR Decode] Błąd BarcodeDetector:", err);
@@ -239,11 +260,26 @@ async function decodeCanvas(canvas) {
   try {
     const jsQR = await loadJsQR();
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" })?.data ?? null;
-    if (code) {
-      console.log("[QR Decode] jsQR wykrył kod:", code);
+    const res = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
+    if (res?.data) {
+      console.log("[QR Decode] jsQR wykrył kod:", res.data);
+      let qrBox = null;
+      if (res.location) {
+        const loc = res.location;
+        const xs = [loc.topLeftCorner.x, loc.topRightCorner.x, loc.bottomRightCorner.x, loc.bottomLeftCorner.x];
+        const ys = [loc.topLeftCorner.y, loc.topRightCorner.y, loc.bottomRightCorner.y, loc.bottomLeftCorner.y];
+        const minX = Math.min(...xs), maxX = Math.max(...xs);
+        const minY = Math.min(...ys), maxY = Math.max(...ys);
+        qrBox = {
+          x: minX / canvas.width,
+          y: minY / canvas.height,
+          w: (maxX - minX) / canvas.width,
+          h: (maxY - minY) / canvas.height,
+        };
+      }
+      return { code: res.data, qrBox };
     }
-    return code;
+    return null;
   } catch (err) {
     console.warn("[QR Decode] Błąd jsQR:", err);
     return null;
@@ -397,13 +433,13 @@ function renderOcrDebug() {
 }
 window.renderOcrDebug = renderOcrDebug;
 
-async function tryOcrLimePlate(imageSource) {
+async function tryOcrLimePlate(imageSource, qrBox = null) {
   if (!imageSource) {
     console.warn("[OCR] Brak źródła obrazu.");
     return null;
   }
   const tStart = performance.now();
-  console.log("[OCR] >>> ROZPOCZYNAM ODCZYT TABLICZKI LIME Z OBRAZU <<<");
+  console.log("[OCR] >>> ROZPOCZYNAM ODCZYT TABLICZKI LIME Z OBRAZU <<<", { qrBox });
   try {
     let bmp;
     if (imageSource instanceof Blob) {
@@ -437,12 +473,49 @@ async function tryOcrLimePlate(imageSource) {
       new Promise((_, rej) => setTimeout(() => rej(new Error("OCR worker init timeout (8s)")), 8000)),
     ]);
 
-    // Paski do przetestowania (dół pod kodem QR i góra nad kodem QR)
-    const strips = [
-      { name: "dół_główny (y: 48%-72%)", y: 0.48, h: 0.24, color: "#10b981" },
-      { name: "dół_niższy (y: 58%-82%)", y: 0.58, h: 0.24, color: "#3b82f6" },
-      { name: "góra (y: 18%-42%)", y: 0.18, h: 0.24, color: "#f59e0b" },
-    ];
+    // Wyznaczenie pasków: jeśli mamy współrzędne QR, wycinamy bezpośrednio pod/nad QR z 15-20% marginesem
+    let strips;
+    if (qrBox && qrBox.w > 0.05 && qrBox.h > 0.05) {
+      const qx = qrBox.x * w;
+      const qy = qrBox.y * h;
+      const qw = qrBox.w * w;
+      const qh = qrBox.h * h;
+      console.log(`[OCR] Wykryto położenie QR: x=${qx.toFixed(0)}, y=${qy.toFixed(0)}, w=${qw.toFixed(0)}, h=${qh.toFixed(0)}px. Dopasowuję paski pod wymiary naklejki.`);
+
+      // 1. Dokładny dół pod QR (15% marginesu na boki, 48% wysokości QR w dół)
+      const pad1 = qw * 0.15;
+      const s1_x = Math.max(0, Math.floor(qx - pad1));
+      const s1_w = Math.min(w - s1_x, Math.floor(qw + 2 * pad1));
+      const s1_y = Math.floor(qy + qh * 0.98);
+      const s1_h = Math.min(h - s1_y, Math.floor(qh * 0.48));
+
+      // 2. Szerszy dół pod QR (25% marginesu na boki, nieco niżej)
+      const pad2 = qw * 0.25;
+      const s2_x = Math.max(0, Math.floor(qx - pad2));
+      const s2_w = Math.min(w - s2_x, Math.floor(qw + 2 * pad2));
+      const s2_y = Math.floor(qy + qh * 1.02);
+      const s2_h = Math.min(h - s2_y, Math.floor(qh * 0.60));
+
+      // 3. Góra nad QR (gdyby numer był nad kodem)
+      const pad3 = qw * 0.15;
+      const s3_x = Math.max(0, Math.floor(qx - pad3));
+      const s3_w = Math.min(w - s3_x, Math.floor(qw + 2 * pad3));
+      const s3_y = Math.max(0, Math.floor(qy - qh * 0.48));
+      const s3_h = Math.min(Math.floor(qy - s3_y), Math.floor(qh * 0.48));
+
+      strips = [
+        { name: "dół_pod_QR (dokładny)", x: s1_x, y: s1_y, w: s1_w, h: s1_h, color: "#10b981" },
+        { name: "dół_szeroki (z marginesem)", x: s2_x, y: s2_y, w: s2_w, h: s2_h, color: "#3b82f6" },
+        { name: "góra_nad_QR", x: s3_x, y: s3_y, w: s3_w, h: s3_h, color: "#f59e0b" },
+      ].filter((s) => s.w > 20 && s.h > 15);
+    } else {
+      console.log("[OCR] Brak precyzyjnych współrzędnych QR – używam domyślnych pasków proporcjonalnych.");
+      strips = [
+        { name: "dół_główny (środek)", x: Math.floor(w * 0.075), y: Math.floor(h * 0.48), w: Math.floor(w * 0.85), h: Math.floor(h * 0.24), color: "#10b981" },
+        { name: "dół_niższy", x: Math.floor(w * 0.075), y: Math.floor(h * 0.58), w: Math.floor(w * 0.85), h: Math.floor(h * 0.24), color: "#3b82f6" },
+        { name: "góra", x: Math.floor(w * 0.075), y: Math.floor(h * 0.18), w: Math.floor(w * 0.85), h: Math.floor(h * 0.24), color: "#f59e0b" },
+      ];
+    }
 
     // Przygotowanie klatki z adnotacjami (obrysami pasków) do debugowania
     const annotCanvas = document.createElement("canvas");
@@ -460,10 +533,10 @@ async function tryOcrLimePlate(imageSource) {
     for (let i = 0; i < strips.length; i++) {
       const s = strips[i];
       const tStrip = performance.now();
-      const sw = Math.floor(w * 0.85);
-      const sh = Math.floor(h * s.h);
-      const sx = Math.floor(w * 0.075);
-      const sy = Math.floor(h * s.y);
+      const sw = s.w;
+      const sh = s.h;
+      const sx = s.x;
+      const sy = s.y;
 
       // Rysuj ramkę na klatce poglądowej
       annotCtx.strokeStyle = s.color;
@@ -526,8 +599,8 @@ async function tryOcrLimePlate(imageSource) {
 
 /* ---------- Krok 1: kod QR skanowany na żywo ---------- */
 // Operator, numer i informacja, czy hulajnoga była już dziś zgłoszona (backend)
-async function checkCurrent(code, operator, photoSource) {
-  console.log("[Check] Rozpoczynam weryfikację:", { code, operator, hasPhotoSource: !!photoSource });
+async function checkCurrent(code, operator, photoSource, qrBox = null) {
+  console.log("[Check] Rozpoczynam weryfikację:", { code, operator, hasPhotoSource: !!photoSource, hasQrBox: !!qrBox });
   const mine = current;
   mine.status = "analyzing";
   mine.analyzingMsg = "Sprawdzam kod…";
@@ -536,10 +609,10 @@ async function checkCurrent(code, operator, photoSource) {
   let detectedId = null;
   const isLime = (typeof code === "string" && /li\.me|lime/i.test(code)) || operator === "lime";
   if (isLime && photoSource) {
-    console.log("[Check] Wykryto hulajnogę Lime. Próbuję odczytać numer tabliczki OCR...");
+    console.log("[Check] Wykryto hulajnogę Lime. Próbuję odczytać numer tabliczki OCR...", { qrBox });
     mine.analyzingMsg = "Odczytuję numer z naklejki…";
     renderStart();
-    detectedId = await tryOcrLimePlate(photoSource);
+    detectedId = await tryOcrLimePlate(photoSource, qrBox);
     console.log("[Check] Rezultat OCR dla Lime:", detectedId || "(brak - fallback na kod QR)");
   }
 
@@ -587,7 +660,19 @@ function renderStart() {
   const thumb = current?.qr ? `<img src="${current.qr.url}" alt="" class="w-16 h-16 rounded-md object-cover bg-muted flex-none">` : "";
   let state = "";
   if (busy) {
-    state = `<div class="flex items-center gap-4">${thumb}<p class="text-sm text-muted">${esc(current?.analyzingMsg || "Sprawdzam kod…")}</p></div>`;
+    state = `<div class="flex items-center gap-4 p-3 rounded-lg border border-default bg-card/60 animate-pulse">
+        <div class="relative w-14 h-14 rounded-md overflow-hidden bg-muted flex-none">
+          ${current?.qr ? `<img src="${current.qr.url}" alt="" class="w-full h-full object-cover">` : ""}
+          <div class="absolute inset-0 bg-emerald-500/20"></div>
+        </div>
+        <div class="flex items-center gap-2.5 min-w-0">
+          <svg class="animate-spin h-4 w-4 text-emerald-500 flex-none" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4-4z"></path>
+          </svg>
+          <p class="text-sm font-medium text-foreground truncate">${esc(current?.analyzingMsg || "Sprawdzam kod…")}</p>
+        </div>
+      </div>`;
   } else if (fail) {
     const msg = current.status === "needop" ? "Nie rozpoznaliśmy operatora tej hulajnogi." : "Nie udało się sprawdzić kodu.";
     state = `<div class="flex items-start gap-4">${thumb}<div class="min-w-0">
@@ -706,8 +791,12 @@ async function openScanner() {
   const mine = current;
   show("scan");
   const frame = $("scan-frame");
+  const laser = $("scan-laser");
   if (frame) {
-    frame.className = "absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none transition-all duration-300";
+    frame.className = "absolute inset-[15%] rounded-2xl border border-white/30 pointer-events-none transition-all duration-300 overflow-hidden";
+  }
+  if (laser) {
+    laser.classList.remove("hidden");
   }
   $("scan-msg").innerHTML = "Włączam aparat…";
   const tScanStart = performance.now();
@@ -737,15 +826,19 @@ async function openScanner() {
         if (frameCount % 20 === 1) {
           console.log(`[Scanner Loop] Przetwarzam klatkę #${frameCount} (${c.width}x${c.height}px)...`);
         }
-        const code = await decodeCanvas(c);
-        if (code && scanning && current === mine) {
+        const result = await decodeCanvas(c);
+        if (result?.code && scanning && current === mine) {
+          const { code, qrBox } = result;
           console.log(`%c[Scanner QR SUKCES] ZNALEZIONO KOD QR: "${code}" w ${(performance.now() - tScanStart).toFixed(0)} ms (klatka #${frameCount})`, "color:#10b981; font-weight:bold; font-size:13px;");
           scanning = false; // zatrzymaj pętlę detekcji
           navigator.vibrate?.([40, 30, 60]);
 
-          // Zielona ramka z poświatą i komunikat sukcesu
+          // Zatrzymanie lasera, zielona ramka z poświatą i komunikat sukcesu
+          if (laser) {
+            laser.classList.add("hidden");
+          }
           if (frame) {
-            frame.className = "absolute inset-[18%] rounded-lg border-2 border-emerald-400 bg-emerald-500/20 shadow-[0_0_24px_rgba(52,211,153,0.6)] scale-[1.03] pointer-events-none transition-all duration-300 ease-out";
+            frame.className = "absolute inset-[15%] rounded-2xl border-2 border-emerald-400 bg-emerald-500/20 shadow-[0_0_32px_rgba(52,211,153,0.7)] scale-[1.03] pointer-events-none transition-all duration-300 ease-out overflow-hidden";
           }
           $("scan-msg").innerHTML = `<span class="text-emerald-500 font-medium">✓ Kod odczytany!</span>`;
 
@@ -758,7 +851,7 @@ async function openScanner() {
           await new Promise((res) => setTimeout(res, 800));
 
           stopScanner();
-          return checkCurrent(code, null, mine.qr.blob);
+          return checkCurrent(code, null, mine.qr.blob, qrBox);
         }
       }
       setTimeout(tick, 120);
