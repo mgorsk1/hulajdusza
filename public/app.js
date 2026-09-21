@@ -313,8 +313,9 @@ async function checkCurrent(code, operator, photoSource) {
   }
   if (current !== mine) return;
   if (mine.status === "ok") {
-    show("doc");
-    renderDoc();
+    openManual(true);
+  } else if (mine.status === "needop" || mine.status === "error") {
+    openManual(false);
   } else {
     show("start");
     renderStart();
@@ -353,7 +354,8 @@ function renderStart() {
 function renderDoc() {
   if (!current) return;
   const op = opByKey(current.operator);
-  $("doc-chip").innerHTML = `<span class="dot" style="background:${dotColor(op)}"></span>Mamy to: ${esc(op.name)}, numer ${esc(current.id)}`;
+  $("doc-chip").innerHTML = `<span class="dot" style="background:${dotColor(op)}"></span><span>Mamy to: ${esc(op?.name || current.operator)}, numer <strong>${esc(current.id)}</strong></span><button id="doc-edit-id" class="ml-auto text-xs text-muted hover:text-[hsl(var(--foreground))] underline flex-none">Zmień</button>`;
+  $("doc-edit-id")?.addEventListener("click", () => openManual(true));
   $("doc-thumbs").innerHTML = current.docs.map((d, i) => `<div class="relative"><img src="${d.url}" alt="Zdjęcie ${i + 1}" class="w-full aspect-square rounded-lg object-cover bg-muted"><button data-i="${i}" class="doc-rm absolute top-2 right-2 h-8 px-3 rounded-full bg-primary text-primary-foreground text-xs font-medium" aria-label="Usuń zdjęcie">Usuń</button></div>`).join("");
   $("doc-thumbs").classList.toggle("hidden", !current.docs.length);
   $("doc-thumbs").querySelectorAll(".doc-rm").forEach((b) =>
@@ -506,23 +508,84 @@ $("manual").onclick = () => {
   stopScanner();
   openManual();
 };
-function openManual() {
+function openManual(isConfirmation = false) {
   if (!current) current = { status: "manual", qr: null, docs: [] };
+  $("err-manual")?.classList.add("hidden");
+
+  const hasQr = !!current.qr;
+  const thumbWrap = $("m-thumb-wrap");
+  if (thumbWrap) {
+    thumbWrap.classList.toggle("hidden", !hasQr);
+    if (hasQr) $("m-thumb").src = current.qr.url;
+  }
+
+  if (isConfirmation || hasQr) {
+    $("m-title").textContent = "Potwierdź dane hulajnogi";
+    $("m-desc").textContent = "Odczytaliśmy operatora i numer. Sprawdź, czy numer zgadza się z tabliczką, lub popraw go.";
+  } else {
+    $("m-title").textContent = "Wpisz numer ręcznie";
+    $("m-desc").textContent = "Wybierz operatora i wpisz numer z kierownicy lub tabliczki hulajnogi.";
+  }
+
   if (current.operator) $("m-op").value = current.operator;
-  $("m-id").value = current.code ?? "";
+  $("m-id").value = current.id || (current.code ? current.code : "");
   show("manual");
+  $("m-id").focus();
 }
 $("m-back").onclick = () => {
   discardCurrent();
   show("start");
   renderStart();
 };
-$("m-ok").onclick = () => {
-  const code = $("m-id").value.trim();
-  if (!code) return $("m-id").focus();
-  if (!current) current = { status: "manual", qr: null, docs: [] };
-  show("start");
-  checkCurrent(code, $("m-op").value);
+$("m-ok").onclick = async () => {
+  const enteredId = $("m-id").value.trim();
+  const opKey = $("m-op").value;
+  const err = $("err-manual");
+  err?.classList.add("hidden");
+
+  if (!enteredId) {
+    if (err) {
+      err.textContent = "Wpisz numer hulajnogi.";
+      err.classList.remove("hidden");
+    }
+    return $("m-id").focus();
+  }
+  if (!opKey) {
+    if (err) {
+      err.textContent = "Wybierz operatora.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (!current) current = { status: "ok", qr: null, docs: [] };
+  current.id = enteredId;
+  current.operator = opKey;
+  current.operatorName = opByKey(opKey)?.name || opKey;
+  current.code = current.code || enteredId;
+
+  // Sprawdź duplikat na backendzie
+  try {
+    const r = await fetch("/api/check", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ code: current.code, operator: opKey, id: enteredId }),
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.duplicate) {
+        if (err) {
+          err.textContent = `Hulajnoga ${enteredId} (${current.operatorName}) była już dziś zgłoszona. Nie przyjmujemy drugiego zgłoszenia tego samego dnia.`;
+          err.classList.remove("hidden");
+        }
+        return;
+      }
+    }
+  } catch {}
+
+  current.status = "ok";
+  show("doc");
+  renderDoc();
 };
 
 /* ---------- Krok 3: kopia (e-mail zapamiętany lokalnie) ---------- */
