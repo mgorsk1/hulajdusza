@@ -56,12 +56,9 @@
   <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-10 space-y-6 viz-root">
     <div class="flex items-center gap-3 pb-2">
       <h1 class="text-3xl font-bold tracking-tight">Statystyki</h1>
-      <span class="live-indicator" aria-label="Dane na żywo">
-        <span class="live-dot-wrap" aria-hidden="true">
-          <span class="live-dot-ping"></span>
-          <span class="live-dot-core"></span>
-        </span>
-        LIVE
+      <span class="live-dot" title="Dane na żywo" aria-label="Dane na żywo">
+        <span class="live-dot-ping"></span>
+        <span class="live-dot-core"></span>
       </span>
     </div>
 
@@ -280,7 +277,7 @@
       el.innerHTML = s + "</svg>";
     }
 
-    const getJson = (u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
+    const getJson = (u) => fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
     function renderAll() {
       metric();
       leader();

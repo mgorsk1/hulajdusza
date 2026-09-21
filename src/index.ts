@@ -64,7 +64,7 @@ export default {
     if (pathname === "/api/quota" && request.method === "GET") return json(await quotaState(env), 200, { "cache-control": "no-store" });
     if (pathname === "/api/check" && request.method === "POST") return check(request, env);
     if (pathname === "/api/preview" && request.method === "POST") return preview(request, env);
-    if (pathname === "/api/report" && request.method === "POST") return createReport(request, env);
+    if (pathname === "/api/report" && request.method === "POST") return createReport(request, env, ctx);
     if (pathname.startsWith("/api/")) return json({ error: "not_found" }, 404);
 
     return env.ASSETS.fetch(request);
@@ -198,7 +198,7 @@ async function cachedStats(request: Request, env: Env, ctx: ExecutionContext): P
   const hit = await cache.match(key);
   if (hit) return hit;
   const res = await stats(env);
-  res.headers.set("cache-control", `public, max-age=${ttl}`);
+  res.headers.set("cache-control", `public, max-age=0, s-maxage=${ttl}, must-revalidate`);
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
@@ -424,7 +424,7 @@ async function preview(request: Request, env: Env): Promise<Response> {
 }
 
 /** Wysyłka: Turnstile, zdjęcia z załącznikami, mail do operatora (DW: użytkownik), statystyki w D1. */
-async function createReport(request: Request, env: Env): Promise<Response> {
+async function createReport(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   let form: FormData;
   try {
     form = await request.formData();
@@ -524,5 +524,10 @@ async function createReport(request: Request, env: Env): Promise<Response> {
   const failedCount = results.filter((x) => x.status === "failed").length;
   // Niewysłane wiadomości nie zużywają limitu
   if (failedCount) await bumpQuota(env, -failedCount);
+  if (ctx && results.some((r) => r.status === "sent")) {
+    const statsKey = new Request(new URL("/api/stats", request.url).toString());
+    const reportsKey = new Request(new URL("/api/reports", request.url).toString());
+    ctx.waitUntil(Promise.all([caches.default.delete(statsKey), caches.default.delete(reportsKey)]));
+  }
   return json({ ok: !failedCount, street: r.street, results, quota: await quotaState(env) }, failedCount ? 502 : 200);
 }
