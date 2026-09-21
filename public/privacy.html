@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <script src="/theme.js"></script>
+  <title>Polityka prywatności – Hulajdusza</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="sticky top-0 z-50 border-b border-default bg-[hsl(var(--background))]/95 backdrop-blur">
+    <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="text-base font-bold tracking-tight whitespace-nowrap">😈 Hulajdusza</a>
+      <nav class="flex items-center gap-3 whitespace-nowrap">
+        <a href="/" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Zgłoś</a>
+        <a href="/map" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Mapa</a>
+        <a href="/stats" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Statystyki</a>
+        <button type="button" data-theme-toggle class="grid place-items-center w-10 h-10 -mr-2 text-muted hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Zmień motyw"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-2xl w-full mx-auto px-6 py-10 space-y-8">
+    <div class="space-y-3">
+      <h1 class="text-3xl font-bold tracking-tight">Polityka prywatności</h1>
+      <p class="text-muted leading-relaxed">Projektując Hulajduszę, przyjęliśmy zasadę maksymalnej ochrony prywatności (Privacy by Design). Zbieramy tylko to, co niezbędne do przekazania zgłoszenia operatorowi, i nie przechowujemy Twoich danych osobowych.</p>
+    </div>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">1. Zdjęcia hulajnogi i kodu QR</h2>
+      <p class="text-muted leading-relaxed">
+        Zdjęcia wykonane w aplikacji służą wyłącznie jako dowód nieprawidłowego parkowania. Trafiają bezpośrednio do operatora jako załączniki w wiadomości e-mail.
+      </p>
+      <p class="text-muted leading-relaxed font-medium text-[hsl(var(--foreground))]">
+        Zdjęcia nigdy nie są zapisywane w naszej bazie danych ani na dyskach serwera – po wysłaniu maila są natychmiast usuwane z pamięci.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">2. Twój adres e-mail (kopia DW)</h2>
+      <p class="text-muted leading-relaxed">
+        Podanie adresu e-mail jest w pełni opcjonalne. Służy wyłącznie do dopisania Cię w polu DW (kopia wiadomości), abyś miał potwierdzenie wysłania zgłoszenia.
+      </p>
+      <p class="text-muted leading-relaxed font-medium text-[hsl(var(--foreground))]">
+        Twój adres e-mail nigdy nie trafia do naszej bazy danych. Jest zapamiętywany jedynie lokalnie w Twojej przeglądarce (na Twoim urządzeniu), abyś nie musiał wpisywać go ponownie.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">3. Lokalizacja GPS i adres</h2>
+      <p class="text-muted leading-relaxed">
+        Pobieramy pozycję GPS wyłącznie za Twoją zgodą, aby ustalić ulicę i przekazać operatorowi dokładne miejsce postoju hulajnogi.
+      </p>
+      <p class="text-muted leading-relaxed">
+        W bazie danych zapisujemy wyłącznie zanonimizowane statystyki (nazwę ulicy, dzielnicę, przybliżone współrzędne, markę operatora oraz datę), które prezentujemy na publicznej mapie i w statystykach.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">4. Odbiorcy zgłoszeń</h2>
+      <p class="text-muted leading-relaxed">
+        Zgłoszenia trafiają bezpośrednio na skrzynki e-mail operatorów hulajnóg w Warszawie (Bolt, Lime, Dott) w celu interwencji i uporządkowania pojazdów.
+      </p>
+    </section>
+
+    <section class="space-y-4">
+      <h2 class="text-xl font-semibold tracking-tight">5. Ciasteczka i śledzenie</h2>
+      <p class="text-muted leading-relaxed">
+        Nie używamy żadnych marketingowych ani śledzących plików cookies (brak Google Analytics, Meta Pixel itp.). Korzystamy jedynie z pamięci lokalnej przeglądarki do zapamiętania wybranego motywu (jasny/ciemny) oraz opcjonalnego adresu e-mail.
+      </p>
+    </section>
+
+    <div class="pt-4 border-t border-default">
+      <a href="/" class="btn btn-secondary inline-flex w-auto px-6">Wróć do zgłaszania</a>
+    </div>
+  </main>
+
+  <footer class="border-t border-default">
+    <div class="max-w-2xl mx-auto px-6 py-6 text-xs text-muted">
+      <p>Polityka prywatności serwisu Hulajdusza</p>
+    </div>
+  </footer>
+</body>
+</html>

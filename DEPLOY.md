@@ -309,6 +309,7 @@ Jeśli mail nie dochodzi: w `npx wrangler tail` szukaj `mail failed`. Częste pr
 
 - Zmiana kodu: `npx wrangler deploy`.
 - Zmiana schematu (`schema.sql` używa `CREATE TABLE IF NOT EXISTS`, więc bezpiecznie): `npx wrangler d1 execute hulajdusza --remote --file=schema.sql`.
+- Czyszczenie danych testowych (produkcja): `task db:reset:remote` (albo `npx wrangler d1 execute hulajdusza --remote --file=clear.sql`).
 - Istniejąca baza po dodaniu nowych tabel agregatów: `task db:rebuild-stats:remote` (przelicza statystyki i liczniki limitów z tabeli `reports`).
 - Podgląd danych: `npx wrangler d1 execute hulajdusza --remote --command "SELECT operator, COUNT(*) FROM reports GROUP BY operator"`.
 - Cofnięcie wersji Workera: `npx wrangler rollback`.

@@ -74,7 +74,6 @@
       );
     }
     map.once("load", centerOnMe);
-
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const mapLoaded = new Promise((res) => map.on("load", res));
 
