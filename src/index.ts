@@ -370,7 +370,8 @@ async function buildDrafts(input: {
       operator: key,
       name: op.name,
       to: op.email,
-      cc: ccRaw || null,
+      bcc: ccRaw || null,
+      cc: null,
       phone: op.phone ?? null,
       formUrl: op.formUrl ?? null,
       subject: `Źle zaparkowana hulajnoga ${op.name} – ${ids[0]} (${street})`,
@@ -398,7 +399,7 @@ async function buildDrafts(input: {
     };
   });
 
-  return { ok: true as const, lat, lng, geo, street, whenIso: when.toISOString(), cc: ccRaw || null, drafts };
+  return { ok: true as const, lat, lng, geo, street, whenIso: when.toISOString(), cc: ccRaw || null, bcc: ccRaw || null, drafts };
 }
 
 /** Podgląd wiadomości, które pójdą do operatorów. Bez zapisu i bez wysyłki. */
@@ -425,7 +426,7 @@ async function preview(request: Request, env: Env): Promise<Response> {
   });
 }
 
-/** Wysyłka: Turnstile, zdjęcia z załącznikami, mail do operatora (DW: użytkownik), statystyki w D1. */
+/** Wysyłka: Turnstile, zdjęcia z załącznikami, mail do operatora (UDW: użytkownik), statystyki w D1. */
 async function createReport(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   let form: FormData;
   try {
@@ -498,7 +499,7 @@ async function createReport(request: Request, env: Env, ctx?: ExecutionContext):
           });
         }
       }
-      await sendMail(env, { to: d.to, cc: d.cc ?? undefined, subject: d.subject, text: d.body, attachments });
+      await sendMail(env, { to: d.to, bcc: d.bcc ?? undefined, subject: d.subject, text: d.body, attachments });
     } catch (e) {
       console.error("mail failed", d.operator, e);
       results.push({ operator: d.operator, name: d.name, count: d.photoIndexes.length, status: "failed" });

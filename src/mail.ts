@@ -7,6 +7,7 @@ export interface Attachment {
 
 export interface OutgoingMail {
   to: string;
+  bcc?: string;
   cc?: string;
   subject: string;
   text: string;
@@ -19,6 +20,7 @@ export interface EmailBinding {
     from: string;
     to: string;
     cc?: string[];
+    bcc?: string[];
     subject: string;
     text: string;
     attachments?: Attachment[];
@@ -43,9 +45,10 @@ export function toBase64(buf: ArrayBuffer): string {
 }
 
 export async function sendMail(env: MailEnv, mail: OutgoingMail): Promise<void> {
+  const bccRecipient = mail.bcc || mail.cc;
   if (env.EMAIL_DRY_RUN !== "false") {
     console.log(
-      `[DRY RUN] od: ${env.FROM_EMAIL}\ndo: ${mail.to}${mail.cc ? `\ndw: ${mail.cc}` : ""}\ntemat: ${mail.subject}\n\n${mail.text}\n\nzałączniki: ${mail.attachments?.length ?? 0}`,
+      `[DRY RUN] od: ${env.FROM_EMAIL}\ndo: ${mail.to}${bccRecipient ? `\nudw: ${bccRecipient}` : ""}\ntemat: ${mail.subject}\n\n${mail.text}\n\nzałączniki: ${mail.attachments?.length ?? 0}`,
     );
     return;
   }
@@ -57,7 +60,7 @@ export async function sendMail(env: MailEnv, mail: OutgoingMail): Promise<void> 
       body: JSON.stringify({
         from: env.FROM_EMAIL,
         to: [mail.to],
-        ...(mail.cc ? { cc: [mail.cc] } : {}),
+        ...(bccRecipient ? { bcc: [bccRecipient] } : {}),
         subject: mail.subject,
         text: mail.text,
         attachments: mail.attachments?.map((a) => ({ filename: a.filename, content: a.content })),
@@ -69,7 +72,7 @@ export async function sendMail(env: MailEnv, mail: OutgoingMail): Promise<void> 
   await env.EMAIL.send({
     from: env.FROM_EMAIL,
     to: mail.to,
-    ...(mail.cc ? { cc: [mail.cc] } : {}),
+    ...(bccRecipient ? { bcc: [bccRecipient] } : {}),
     subject: mail.subject,
     text: mail.text,
     attachments: mail.attachments,

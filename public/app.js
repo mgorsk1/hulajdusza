@@ -6,7 +6,7 @@ const MAX_DOCS = 2; // zdjęcia dokumentujące złe parkowanie (oprócz zdjęcia
 
 const VIEWS = ["start", "doc", "scan", "manual", "email", "confirm", "done"];
 const STEP_OF = { start: 1, scan: 1, manual: 1, doc: 2, email: 3, confirm: 4 };
-const STEP_TITLE = { 1: "Kod QR", 2: "Zdjęcie hulajnogi", 3: "Kopia", 4: "Potwierdzenie" };
+const STEP_TITLE = { 1: "Kod QR", 2: "Zdjęcie hulajnogi", 3: "Kopia UDW", 4: "Potwierdzenie" };
 
 const plural = (n, one, few, many) =>
   n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && !(n % 100 >= 12 && n % 100 <= 14) ? few : many;
@@ -1007,7 +1007,7 @@ function renderMails(data) {
     el.innerHTML = `
       <div class="mail-row"><span>Od</span><span>${esc(m.from)}</span></div>
       <div class="mail-row"><span>Do</span><span><span class="badge">${esc(m.to)}</span></span></div>
-      ${m.cc ? `<div class="mail-row"><span>DW</span><span><span class="badge">${esc(m.cc)}</span></span></div>` : ""}
+      ${(m.bcc || m.cc) ? `<div class="mail-row"><span>UDW</span><span><span class="badge">${esc(m.bcc || m.cc)}</span></span></div>` : ""}
       <div class="mail-row"><span>Temat</span><span>${highlight(m.subject, [...h.ids, h.street, opBadge])}</span></div>
       <div class="mail-body">${highlight(m.body, [...h.ids, h.address, h.when, opBadge])}</div>
       <div class="mail-att"><span>Załączniki:</span>${photos.map((p) => `<img src="${p.url}" alt="">`).join("")}<span>${photosWord(photos.length)}</span></div>`;
@@ -1100,7 +1100,7 @@ $("send").onclick = async () => {
       outside_warsaw: "Zgłoszenia przyjmujemy tylko z Warszawy.",
       too_large: "Zdjęcia są za duże.",
       need_photos: "Do każdej hulajnogi potrzebne jest zdjęcie kodu QR i zdjęcie miejsca, w którym stoi (przy ręcznie wpisanym numerze wystarczy to drugie).",
-      bad_cc: "Adres e-mail w DW jest niepoprawny. Wróć i popraw go.",
+      bad_cc: "Adres e-mail w UDW jest niepoprawny. Wróć i popraw go.",
     };
     showErr3(msgs[e.message] || "Coś poszło nie tak. Spróbuj ponownie.");
   } finally {
