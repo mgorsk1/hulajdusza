@@ -79,6 +79,16 @@ tasks:
     cmds:
       - npx wrangler secret put TURNSTILE_SECRET
 
+  secret:hash:
+    desc: Ustaw sekret HASH_SECRET na produkcji (HMAC skrótów hulajnóg). Wygeneruj: openssl rand -hex 32
+    cmds:
+      - npx wrangler secret put HASH_SECRET
+
+  secret:resend:
+    desc: Ustaw klucz API Resend na produkcji (gdy MAIL_PROVIDER=resend)
+    cmds:
+      - npx wrangler secret put RESEND_API_KEY
+
   deploy:
     desc: Wdróż na Cloudflare Workers
     deps: [typecheck]

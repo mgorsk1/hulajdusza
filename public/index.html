@@ -15,8 +15,8 @@
 <body class="min-h-screen flex flex-col">
   <header class="sticky top-0 z-50 border-b border-default bg-[hsl(var(--background))]/95 backdrop-blur">
     <div class="max-w-md mx-auto px-6 h-14 flex items-center justify-between">
-      <a href="/" class="text-base font-bold tracking-tight">Hulajdusza</a>
-      <nav class="flex items-center gap-4 whitespace-nowrap">
+      <a href="/" class="text-base font-bold tracking-tight whitespace-nowrap">😈 Hulajdusza</a>
+      <nav class="flex items-center gap-3 whitespace-nowrap">
         <a href="/" class="text-sm font-medium">Zgłoś</a>
         <a href="/map" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Mapa</a>
         <a href="/stats" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Statystyki</a>
@@ -24,30 +24,58 @@
       </nav>
     </div>
   </header>
+  <div id="quota-bar" class="hidden border-b border-default bg-muted/50">
+    <p id="quota" class="max-w-md mx-auto px-6 py-2 text-sm text-muted" role="status"></p>
+  </div>
 
   <main class="flex-1 max-w-md w-full mx-auto px-6 py-10">
-    <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+    <input id="doc-shot-in" type="file" accept="image/*" capture="environment" hidden>
+    <input id="doc-add-in" type="file" accept="image/*" multiple hidden>
 
-    <!-- Start -->
-    <section id="v-start" class="space-y-8">
+    <nav id="steps" class="mb-8" aria-label="Postęp zgłoszenia">
+      <div id="steps-bar" class="steps"><span class="seg"></span><span class="seg"></span><span class="seg"></span><span class="seg"></span></div>
+      <p id="steps-label" class="text-xs text-muted mt-2"></p>
+    </nav>
+
+    <!-- Krok 1: zdjęcia (najpierw kod QR, potem dokumentacja) -->
+    <section id="v-start" class="space-y-6">
       <div class="space-y-3">
         <h1 class="text-3xl font-bold tracking-tight whitespace-nowrap">Źle zaparkowana?</h1>
-        <p class="text-muted leading-relaxed">Hulajnoga blokuje chodnik, przejście albo przejazd – lub po prostu stoi tam, gdzie nie powinna. Zrób zdjęcie i zeskanuj kod QR, a zgłoszenie wyślemy do operatora.</p>
+        <p class="text-muted leading-relaxed">Hulajnoga blokuje chodnik, przejście albo przejazd – lub po prostu stoi tam, gdzie nie powinna. Pomożemy Ci to zgłosić operatorowi. Potrzebujemy dwóch zdjęć: kodu QR i miejsca, w którym stoi hulajnoga.</p>
       </div>
-      <ol class="space-y-2 text-sm text-muted">
-        <li>1. Zdjęcie hulajnogi</li>
-        <li>2. Kod QR</li>
-        <li>3. Wyślij</li>
-      </ol>
-      <button id="start" class="btn btn-primary">Zrób zdjęcie</button>
+      <div id="qr-state"></div>
+      <div id="capture" class="space-y-3">
+        <button id="scan-start" class="btn btn-primary">Zeskanuj kod QR</button>
+        <button id="manual-start" class="btn btn-ghost">Wpisz numer ręcznie</button>
+      </div>
       <p id="loc-start" class="text-sm text-muted"></p>
     </section>
 
-    <!-- Skan QR -->
+    <!-- Zdjęcie 2: dokumentacja -->
+    <section id="v-doc" class="hidden space-y-6">
+      <div id="doc-chip" class="flex items-center gap-2 text-sm font-medium"></div>
+      <div class="space-y-3">
+        <h2 class="text-2xl font-semibold tracking-tight">Pokaż, gdzie stoi hulajnoga</h2>
+        <p class="text-muted leading-relaxed">Zrób zdjęcie całej hulajnogi razem z tym, co blokuje: chodnikiem, przejściem albo wjazdem. Dobrze, jeśli widać też otoczenie, np. numer domu.</p>
+      </div>
+      <div id="doc-thumbs" class="grid grid-cols-2 gap-3"></div>
+      <div id="doc-capture" class="grid grid-cols-2 gap-3">
+        <button id="doc-shot" class="btn btn-primary whitespace-nowrap">Zrób zdjęcie</button>
+        <button id="doc-add" class="btn btn-secondary whitespace-nowrap">Dodaj zdjęcie</button>
+      </div>
+      <p id="doc-hint" class="text-sm text-muted leading-relaxed"></p>
+      <p id="err-doc" class="hidden text-sm text-danger"></p>
+      <div class="space-y-3">
+        <button id="doc-done" class="btn btn-primary" disabled>Dalej</button>
+        <button id="doc-back" class="btn btn-ghost">Zmień zdjęcie kodu QR</button>
+      </div>
+    </section>
+
+    <!-- Skan QR (awaryjnie, gdy kodu nie widać na zdjęciu) -->
     <section id="v-scan" class="hidden space-y-6">
       <div class="space-y-2">
         <h2 class="text-2xl font-semibold tracking-tight">Zeskanuj kod QR</h2>
-        <p class="text-sm text-muted">Skieruj aparat na kod na kierownicy.</p>
+        <p class="text-sm text-muted leading-relaxed">Skieruj aparat na kod na kierownicy hulajnogi. Zrobimy zdjęcie automatycznie, gdy tylko go odczytamy.</p>
       </div>
       <div class="relative aspect-square overflow-hidden rounded-lg border border-default bg-muted">
         <video id="video" class="absolute inset-0 w-full h-full object-cover" playsinline muted></video>
@@ -56,7 +84,7 @@
       <p id="scan-msg" class="text-sm text-muted"></p>
       <div class="space-y-3">
         <button id="manual" class="btn btn-secondary">Wpisz ręcznie</button>
-        <button id="scan-cancel" class="btn text-muted">Anuluj</button>
+        <button id="scan-cancel" class="btn btn-ghost">Wróć</button>
       </div>
     </section>
 
@@ -70,25 +98,49 @@
         </label>
         <label class="block space-y-2">
           <span class="text-sm font-medium">Numer hulajnogi</span>
-          <input id="m-id" class="field" autocomplete="off" autocapitalize="characters" placeholder="np. 123456">
+          <input id="m-id" class="field" autocomplete="off" autocapitalize="characters" placeholder="123-456">
         </label>
       </div>
       <div class="space-y-3">
         <button id="m-ok" class="btn btn-primary">Dalej</button>
-        <button id="m-back" class="btn text-muted">Wróć do skanera</button>
+        <button id="m-back" class="btn btn-ghost">Wróć</button>
       </div>
     </section>
 
-    <!-- Podsumowanie -->
-    <section id="v-review" class="hidden space-y-8">
-      <h2 class="text-2xl font-semibold tracking-tight">Gotowe do wysłania</h2>
-      <ul id="list" class="space-y-3"></ul>
-      <button id="add" class="btn btn-secondary">+ Kolejna hulajnoga</button>
-      <div class="space-y-3 pt-2 border-t border-default">
-        <p id="loc-review" class="text-sm text-muted pt-4"></p>
-        <div id="ts"></div>
-        <p id="err" class="hidden text-sm text-danger"></p>
-        <button id="send" class="btn btn-primary" disabled>Wyślij zgłoszenie</button>
+    <!-- Krok 2: kopia -->
+    <section id="v-email" class="hidden space-y-6">
+      <div class="space-y-3">
+        <h2 class="text-2xl font-semibold tracking-tight">Chcesz kopię wiadomości?</h2>
+        <p class="text-muted leading-relaxed">Wpisz swój e-mail, a dopiszemy go w DW. Zapamiętamy go tylko na tym urządzeniu, w bazie go nie zapisujemy.</p>
+      </div>
+      <label class="block">
+        <span class="sr-only">Twój e-mail</span>
+        <input id="cc" type="email" class="field" style="height:3rem" autocomplete="email" inputmode="email" placeholder="jan.kowalski@gmail.com">
+      </label>
+      <p id="err2" class="hidden text-sm text-danger"></p>
+      <div class="space-y-3">
+        <button id="next2" class="btn btn-primary">Dalej</button>
+        <button id="skip2" class="btn btn-secondary">Pomiń</button>
+        <button id="back2" class="btn btn-ghost">Wstecz</button>
+      </div>
+    </section>
+
+    <!-- Krok 3: potwierdzenie -->
+    <section id="v-confirm" class="hidden space-y-6">
+      <div class="space-y-3">
+        <h2 class="text-2xl font-semibold tracking-tight">Sprawdź wiadomość</h2>
+        <p class="text-muted leading-relaxed">Wyślemy ją z aplikacji. Sprawdź, czy wszystko się zgadza.</p>
+      </div>
+      <div id="mails" class="space-y-6"></div>
+      <label class="flex items-center gap-3 text-sm cursor-pointer">
+        <input id="okchk" type="checkbox" class="w-5 h-5 accent-[hsl(var(--primary))]">
+        <span>Sprawdziłem, wszystko się zgadza</span>
+      </label>
+      <div id="ts"></div>
+      <p id="err3" class="hidden text-sm text-danger"></p>
+      <div class="space-y-3">
+        <button id="send" class="btn btn-primary" disabled>Wyślij wiadomość</button>
+        <button id="back3" class="btn btn-ghost">Wstecz</button>
       </div>
     </section>
 
@@ -96,7 +148,8 @@
     <section id="v-done" class="hidden space-y-8">
       <div class="space-y-3">
         <h2 class="text-3xl font-bold tracking-tight">Wysłane</h2>
-        <p id="done-msg" class="text-muted leading-relaxed"></p>
+        <ul id="done-list" class="space-y-2 text-muted leading-relaxed"></ul>
+        <p id="done-quota" class="text-sm text-muted"></p>
       </div>
       <div class="space-y-3">
         <a href="/map" class="btn btn-secondary">Zobacz mapę zgłoszeń</a>
@@ -107,7 +160,7 @@
 
   <footer class="border-t border-default">
     <div class="max-w-md mx-auto px-6 py-6">
-      <p class="text-xs text-muted">Zdjęć i kodów nie przechowujemy – trafiają tylko do operatora. Zapisujemy wyłącznie statystyki zgłoszenia.</p>
+      <p class="text-xs text-muted">Zdjęcia trafiają tylko do operatora w mailu. W bazie zapisujemy wyłącznie statystyki zgłoszenia.</p>
     </div>
   </footer>
 

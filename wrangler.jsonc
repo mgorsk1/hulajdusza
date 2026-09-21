@@ -12,22 +12,27 @@
     {
       "binding": "DB",
       "database_name": "hulajdusza",
-      // wstaw ID po `wrangler d1 create hulajdusza`
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      // wstaw ID po `npx wrangler d1 create hulajdusza`
+      "database_id": "439c066a-fe34-46c7-86f1-beec40821b52"
     }
   ],
-  // Cloudflare Email Service (wysyłka do dowolnych odbiorców; domena nadawcy musi być zweryfikowana)
+  // Cloudflare Email Service: wysyłka do dowolnych odbiorców wymaga planu Workers Paid i domeny nadawcy na Cloudflare DNS
   "send_email": [{ "name": "EMAIL" }],
   "vars": {
-    // Klucz testowy Turnstile (zawsze przechodzi). Na produkcji podmień na własny.
-    "TURNSTILE_SITE_KEY": "1x00000000000000000000AA",
-    // true = maile tylko logowane (nic nie wychodzi). Ustaw "false" po skonfigurowaniu maili.
-    // Cache /api/stats na krawędzi (sekundy). Lokalnie wyłączony przez .dev.vars.
-    "STATS_CACHE_TTL": "60",
-    "EMAIL_DRY_RUN": "true",
+    // Adres nadawcy (domena musi być dodana w Email Service)
     "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
-    // UZUPEŁNIJ i zweryfikuj adresy zgłoszeniowe operatorów przed wyłączeniem DRY_RUN
-    "OPERATOR_EMAILS": "{\"lime\":\"lime@example.com\",\"bolt\":\"bolt@example.com\",\"dott\":\"dott@example.com\",\"voi\":\"voi@example.com\",\"tier\":\"tier@example.com\",\"hive\":\"hive@example.com\",\"uber\":\"uber@example.com\"}"
+    // "false" = maile naprawdę wychodzą. Domyślnie tylko logi (bezpieczne w dev).
+    "EMAIL_DRY_RUN": "true",
+    // "cloudflare" = Email Service (Workers Paid) albo "resend" = darmowy plan Resend (sekret: wrangler secret put RESEND_API_KEY)
+    "MAIL_PROVIDER": "cloudflare",
+    // Klucz testowy Turnstile: ZAWSZE wymusza interaktywne potwierdzenie i zawsze przechodzi.
+    // Na produkcji podmień na własny klucz i ustaw sekret: task secret:turnstile
+    "TURNSTILE_SITE_KEY": "3x00000000000000000000FF",
+    // Limity zgłoszeń (1 zgłoszenie = 1 mail do operatora). Domyślnie zgodne z darmowym planem Resend.
+    "DAILY_LIMIT": "100",
+    "MONTHLY_LIMIT": "3000",
+    // Cache /api/stats na krawędzi (sekundy). Lokalnie wyłączony przez .dev.vars.
+    "STATS_CACHE_TTL": "60"
   },
   "observability": { "enabled": true }
 }

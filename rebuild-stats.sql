@@ -10,3 +10,11 @@ INSERT INTO stats_totals (kind, key, scooters)
   SELECT 'operator', operator, SUM(scooter_count) FROM reports GROUP BY operator;
 INSERT INTO stats_totals (kind, key, scooters)
   SELECT 'district', COALESCE(district, 'Nieustalona'), SUM(scooter_count) FROM reports GROUP BY 2;
+
+-- Liczniki limitów: dni z ostatnich 35 dni oraz bieżący i poprzednie miesiące
+DELETE FROM quota_usage;
+INSERT INTO quota_usage (period, used)
+  SELECT 'd:' || substr(created_at, 1, 10), COUNT(*) FROM reports
+  WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-35 days') GROUP BY 1;
+INSERT INTO quota_usage (period, used)
+  SELECT 'm:' || substr(created_at, 1, 7), COUNT(*) FROM reports GROUP BY 1;

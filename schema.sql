@@ -28,3 +28,15 @@ CREATE TABLE IF NOT EXISTS stats_totals (
   scooters INTEGER NOT NULL,
   PRIMARY KEY (kind, key)
 ) WITHOUT ROWID;
+
+-- Liczniki limitów zgłoszeń (1 zgłoszenie = 1 wiadomość do operatora): 'd:YYYY-MM-DD' i 'm:YYYY-MM' (UTC).
+CREATE TABLE IF NOT EXISTS quota_usage (
+  period TEXT PRIMARY KEY,
+  used INTEGER NOT NULL
+) WITHOUT ROWID;
+
+-- Hulajnogi zgłoszone danego dnia (doba wg czasu Warszawy). Klucz = 'YYYY-MM-DD:' + HMAC-SHA-256(sekret, data|operator|numer),
+-- czyli bez surowych numerów, których nie da się też odzyskać zgadywaniem. Służy tylko do blokowania powtórnych zgłoszeń, wpisy starsze niż 2 dni są usuwane.
+CREATE TABLE IF NOT EXISTS reported_scooters (
+  key TEXT PRIMARY KEY
+) WITHOUT ROWID;

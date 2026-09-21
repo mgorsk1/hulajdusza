@@ -1,22 +1,47 @@
 export interface Operator {
   key: string;
   name: string;
-  /** Kolor marki na jasnym tle / na ciemnym tle (Uber i Tier mają jaśniejszy odpowiednik, bo czerń i granat nie są widoczne na ciemnym). */
+  /** Kolor marki na jasnym tle / na ciemnym tle. */
   color: string;
   dark: string;
   /** Regex source dopasowywany do treści kodu QR (host / nazwa marki). */
   match: string;
+  /** Kontakt do zgłoszeń o źle zaparkowanych hulajnogach. */
+  email: string;
+  phone?: string;
+  formUrl?: string;
 }
 
-// Operatorzy hulajnóg elektrycznych w Warszawie.
+// Operatorzy hulajnóg elektrycznych w Warszawie (umowy z ZDM: Bolt, Dott, Lime).
+// Hulajnogi Lime dostępne w aplikacji Uber to nadal hulajnogi Lime – ich kod QR jest kodem Lime.
 export const OPERATORS: Operator[] = [
-  { key: "lime", name: "Lime", color: "#bef000", dark: "#bef000", match: "li\\.me|limebike|lime\\.bike|limeapp|\\blime\\b" },
-  { key: "bolt", name: "Bolt", color: "#34d186", dark: "#34d186", match: "bolt\\.eu|bolt\\.com|\\bbolt\\b" },
-  { key: "dott", name: "Dott", color: "#00a3e2", dark: "#00a3e2", match: "dott\\.com|ridedott|dott\\.app|\\bdott\\b" },
-  { key: "voi", name: "Voi", color: "#ec6960", dark: "#ec6960", match: "voi\\.com|voiapp|\\bvoi\\b" },
-  { key: "tier", name: "Tier", color: "#000f3a", dark: "#5f7ae0", match: "tier\\.app|tier-mobility|tier\\.link|\\btier\\b" },
-  { key: "hive", name: "Hive", color: "#cbf700", dark: "#cbf700", match: "hive\\.app|hivemicromobility|\\bhive\\b" },
-  { key: "uber", name: "Uber", color: "#000000", dark: "#ffffff", match: "uber\\.com|ubr\\.to|\\buber\\b" },
+  {
+    key: "lime",
+    name: "Lime",
+    color: "#bef000",
+    dark: "#bef000",
+    match: "li\\.me|limebike|lime\\.bike|limeapp|\\blime\\b",
+    email: "pomoc@li.me",
+    phone: "+48 32 224 71 22",
+  },
+  {
+    key: "bolt",
+    name: "Bolt",
+    color: "#34d186",
+    dark: "#34d186",
+    match: "bolt\\.eu|bolt\\.com|\\bbolt\\b",
+    email: "poland@bolt.eu",
+    phone: "+48 22 307 83 67",
+    formUrl: "https://bolt.eu/pl-pl/scooters/report/",
+  },
+  {
+    key: "dott",
+    name: "Dott",
+    color: "#00a3e2",
+    dark: "#00a3e2",
+    match: "dott\\.com|ridedott|dott\\.app|\\bdott\\b",
+    email: "support@ridedott.com",
+  },
 ];
 
 export const operatorByKey = (key: string) => OPERATORS.find((o) => o.key === key);

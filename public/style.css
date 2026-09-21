@@ -48,7 +48,7 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
   outline: 2px solid hsl(var(--ring)); outline-offset: 2px;
 }
 button:disabled { opacity: .4; pointer-events: none; }
-.btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; height:3.25rem; padding:0 1.5rem;
+.btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; height:3.25rem; padding:0 1rem;
   font-size:.9375rem; font-weight:500; border-radius:.5rem; cursor:pointer; transition:opacity .15s, background-color .15s; width:100%; }
 .btn-primary { background-color:hsl(var(--primary)); color:hsl(var(--primary-foreground)); }
 .btn-primary:hover { opacity:.9; }
@@ -58,3 +58,29 @@ button:disabled { opacity: .4; pointer-events: none; }
   background:hsl(var(--background)); font-size:1rem; }
 .dot { width:.75rem; height:.75rem; border-radius:9999px; display:inline-block; flex:none; box-shadow:0 0 0 1.5px hsl(var(--background)), 0 0 0 2.5px hsl(var(--border)); }
 .text-danger { color: hsl(var(--danger)); }
+
+/* Kroki kreatora */
+.steps { display:flex; gap:.375rem; }
+.steps .seg { height:.25rem; flex:1; border-radius:9999px; background:hsl(var(--border)); transition:background-color .2s; }
+.steps .seg.on { background:hsl(var(--primary)); }
+/* Badge: czarny z białym tekstem w jasnym motywie, odwrotnie w ciemnym (tokeny odwracają się same) */
+.badge { background:hsl(var(--primary)); color:hsl(var(--primary-foreground)); border-radius:9999px; padding:.125rem .625rem; font-weight:500; font-size:.75rem; white-space:nowrap; }
+/* Okno wiadomości tylko do odczytu */
+.mail { border:1px solid hsl(var(--border)); border-radius:.625rem; background:hsl(var(--muted)); overflow:hidden; user-select:text; }
+.mail-row { display:flex; gap:.625rem; padding:.5rem .75rem; border-bottom:1px solid hsl(var(--border)); font-size:.8125rem; line-height:1.55; align-items:baseline; }
+.mail-row > span:first-child { width:2.75rem; flex:none; color:hsl(var(--muted-foreground)); }
+.mail-row > span:last-child { min-width:0; overflow-wrap:anywhere; color:hsl(var(--muted-foreground)); }
+.mail-body { padding:.75rem; font-size:.8125rem; line-height:1.65; color:hsl(var(--muted-foreground)); white-space:pre-wrap; overflow-wrap:anywhere; }
+.mail-att { display:flex; gap:.5rem; align-items:center; padding:.625rem .75rem; border-top:1px solid hsl(var(--border)); font-size:.75rem; color:hsl(var(--muted-foreground)); flex-wrap:wrap; }
+.mail-att img { width:2.125rem; height:2.125rem; object-fit:cover; border-radius:.375rem; }
+.btn-ghost { color:hsl(var(--muted-foreground)); }
+.btn-ghost:hover { color:hsl(var(--foreground)); }
+
+/* Najwęższe telefony: ciaśniejszy nagłówek, żeby logo z emoji i nawigacja się mieściły
+   (!important, bo klasy narzędziowe Tailwinda mają większą specyficzność) */
+@media (max-width: 379px) {
+  header > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+  header > div > a { font-size: .875rem !important; }
+  header nav { gap: .5rem !important; }
+  header nav a { font-size: .8125rem !important; }
+}
