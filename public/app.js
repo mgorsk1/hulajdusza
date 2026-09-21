@@ -37,6 +37,7 @@ const configReady = fetch("/api/config").then((r) => r.json()).then((c) => {
 });
 
 function show(name) {
+  console.log(`[View] Przełączenie widoku -> "${name}"`);
   VIEWS.forEach((v) => $("v-" + v).classList.toggle("hidden", v !== name));
   const n = STEP_OF[name];
   $("steps").classList.toggle("hidden", !n);
@@ -49,14 +50,22 @@ function show(name) {
 
 /* ---------- Lokalizacja ---------- */
 function locate() {
+  console.log("[Loc] Pobieranie pozycji GPS (getCurrentPosition)...");
   return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
+    if (!navigator.geolocation) {
+      console.warn("[Loc] Brak API geolokalizacji w przeglądarce.");
+      return resolve(null);
+    }
     navigator.geolocation.getCurrentPosition(
       (p) => {
         loc = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: Math.round(p.coords.accuracy), street: null };
+        console.log(`[Loc] Pozycja GPS ustalona: ${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)} (±${loc.accuracy} m)`);
         resolve(loc);
       },
-      () => resolve(null),
+      (err) => {
+        console.warn("[Loc] Błąd geolokalizacji:", err.message || err);
+        resolve(null);
+      },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 },
     );
   }).then((l) => {
@@ -66,11 +75,14 @@ function locate() {
   });
 }
 async function resolveStreet(l) {
+  console.log(`[Loc] Odpytuję /api/geocode?lat=${l.lat}&lng=${l.lng}...`);
   try {
     const r = await fetch(`/api/geocode?lat=${l.lat}&lng=${l.lng}`);
     const d = await r.json();
     l.street = r.ok ? d.street || "" : r.status === 422 ? "poza Warszawą" : "";
-  } catch {
+    console.log("[Loc] Adres ustalony:", l.street || "(brak nazwy)");
+  } catch (err) {
+    console.warn("[Loc] Błąd geokodowania:", err);
     l.street = "";
   }
   renderLoc();
@@ -132,99 +144,237 @@ function discardCurrent() {
   current = null;
 }
 
+/* Mobilna konsola debugowania dla ?debug=1 na telefonie oraz pamięć podręczna */
+const urlParams = new URLSearchParams(location.search);
+if (urlParams.has("debug") || urlParams.has("console") || localStorage.getItem("debug") === "1") {
+  if (urlParams.has("debug") || urlParams.has("console")) {
+    try { localStorage.setItem("debug", "1"); } catch {}
+  }
+  const s = document.createElement("script");
+  s.src = "https://cdn.jsdelivr.net/npm/eruda";
+  s.onload = () => {
+    window.eruda?.init();
+    console.log("%c[DEBUG] Eruda DevTools aktywne!", "color:#10b981; font-weight:bold; font-size:14px;");
+  };
+  document.head.append(s);
+}
+
+// Globalny toggle do debugowania z poziomu konsoli lub UI
+window.toggleDebug = () => {
+  const cur = localStorage.getItem("debug") === "1";
+  if (cur) {
+    localStorage.removeItem("debug");
+    alert("Tryb debug wyłączony. Przeładowuję stronę...");
+  } else {
+    localStorage.setItem("debug", "1");
+    alert("Tryb debug włączony! Przeładowuję stronę z Eruda...");
+  }
+  location.reload();
+};
+
+// Potrójne kliknięcie w logo włącza/wyłącza tryb debugowania na telefonie
+let logoClicks = 0;
+let logoTimer = null;
+document.querySelector("header a")?.addEventListener("click", (e) => {
+  logoClicks++;
+  clearTimeout(logoTimer);
+  logoTimer = setTimeout(() => { logoClicks = 0; }, 600);
+  if (logoClicks >= 3) {
+    logoClicks = 0;
+    e.preventDefault();
+    window.toggleDebug();
+  }
+});
+
+console.log("%c[Hulajdusza Init] Start aplikacji", "color:#3b82f6; font-weight:bold; font-size:14px;");
+console.log("[Sys Info]", {
+  ua: navigator.userAgent,
+  isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1),
+  screen: `${window.innerWidth}x${window.innerHeight} (dpr: ${window.devicePixelRatio})`,
+  wasm: typeof WebAssembly === "object",
+  worker: typeof Worker !== "undefined",
+  barcodeDetector: "BarcodeDetector" in window,
+  debugMode: localStorage.getItem("debug") === "1",
+});
+
 /* Odczyt QR w przeglądarce: BarcodeDetector albo jsQR z CDN */
 let jsqrPromise;
 function loadJsQR() {
   jsqrPromise ??= new Promise((res, rej) => {
+    console.log("[QR Lib] Ładowanie jsQR z CDN...");
+    const t0 = performance.now();
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js";
-    s.onload = () => res(window.jsQR);
-    s.onerror = rej;
+    s.onload = () => {
+      console.log(`[QR Lib] jsQR załadowany w ${(performance.now() - t0).toFixed(0)} ms.`);
+      res(window.jsQR);
+    };
+    s.onerror = (err) => {
+      console.error("[QR Lib] Błąd ładowania jsQR:", err);
+      rej(err);
+    };
     document.head.append(s);
   });
   return jsqrPromise;
 }
 const detector = "BarcodeDetector" in window ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
+if (detector) {
+  console.log("[QR Lib] Wykryto natywny BarcodeDetector w przeglądarce.");
+} else {
+  console.log("[QR Lib] Brak BarcodeDetector – użyjemy jsQR fallback.");
+}
+
 async function decodeCanvas(canvas) {
   if (detector) {
     try {
       const r = await detector.detect(canvas);
-      if (r[0]?.rawValue) return r[0].rawValue;
-    } catch {}
+      if (r[0]?.rawValue) {
+        console.log("[QR Decode] BarcodeDetector wykrył kod:", r[0].rawValue);
+        return r[0].rawValue;
+      }
+    } catch (err) {
+      console.warn("[QR Decode] Błąd BarcodeDetector:", err);
+    }
   }
   try {
     const jsQR = await loadJsQR();
     const img = canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height);
-    return jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" })?.data ?? null;
-  } catch {
+    const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" })?.data ?? null;
+    if (code) {
+      console.log("[QR Decode] jsQR wykrył kod:", code);
+    }
+    return code;
+  } catch (err) {
+    console.warn("[QR Decode] Błąd jsQR:", err);
     return null;
   }
 }
 
-/* OCR dla naklejek Lime (wyciąga numer z tabliczki np. DEE-XKY lub 338-921) */
-let tesseractPromise;
+/* OCR dla naklejek Lime (wyciąga numer z tabliczki np. DEE-XKY lub RJR-SER) */
+let tesseractPromise = null;
 function loadTesseract() {
   tesseractPromise ??= new Promise((res, rej) => {
-    if (window.Tesseract) return res(window.Tesseract);
+    console.log("[OCR] Pobieranie skryptu Tesseract.js (v5) z CDN...");
+    const t0 = performance.now();
+    if (window.Tesseract) {
+      console.log("[OCR] Tesseract.js już istnieje w oknie.");
+      return res(window.Tesseract);
+    }
     const s = document.createElement("script");
     s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    s.onload = () => res(window.Tesseract);
-    s.onerror = rej;
+    s.onload = () => {
+      console.log(`[OCR] Skrypt Tesseract.js pobrany w ${(performance.now() - t0).toFixed(0)} ms.`);
+      res(window.Tesseract);
+    };
+    s.onerror = (e) => {
+      console.error("[OCR] Błąd pobierania skryptu Tesseract.js:", e);
+      rej(e);
+    };
     document.head.append(s);
   });
   return tesseractPromise;
 }
 
 let ocrWorkerPromise = null;
+let ocrWorkerReady = false;
+
 async function getOcrWorker() {
   ocrWorkerPromise ??= (async () => {
+    console.log("[OCR Worker] Tworzenie instancji Tesseract WebWorker (język: eng)...");
+    const t0 = performance.now();
     const T = await loadTesseract();
     const worker = await T.createWorker("eng", 1, {
-      errorHandler: (err) => console.warn("Tesseract worker error:", err),
+      errorHandler: (err) => console.warn("[OCR Worker Error]", err),
+      logger: (m) => {
+        if (m.status === "loading tesseract core" || m.status === "loading language traineddata" || m.status === "initializing api") {
+          console.log(`[OCR Worker Init] ${m.status}: ${Math.round((m.progress || 0) * 100)}%`);
+        }
+      },
     });
+    console.log("[OCR Worker] Ustawianie parametrów (biała lista znaków tabliczki)...");
     await worker.setParameters({
-      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- ",
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-. ",
     });
+    ocrWorkerReady = true;
+    console.log(`%c[OCR Worker Gotowy] Pełna inicjalizacja zajęła ${(performance.now() - t0).toFixed(0)} ms.`, "color:#10b981; font-weight:bold;");
     return worker;
   })();
   return ocrWorkerPromise;
 }
 
+// Pre-warming OCR w tle
+async function prewarmOcr() {
+  try {
+    console.log("[OCR Pre-warm] Start rozgrzewania Tesseract i jsQR w tle...");
+    loadJsQR().catch(() => {});
+    await getOcrWorker();
+    console.log("[OCR Pre-warm] Sukces! Silnik OCR jest rozgrzany i gotowy.");
+  } catch (err) {
+    console.warn("[OCR Pre-warm] Ostrzeżenie przy rozgrzewaniu OCR w tle:", err);
+  }
+}
+window.prewarmOcr = prewarmOcr;
+
+// Uruchomienie pre-warmingu po załadowaniu strony w wolnym czasie przeglądarki
+if (typeof requestIdleCallback === "function") {
+  requestIdleCallback(() => prewarmOcr(), { timeout: 2000 });
+} else {
+  setTimeout(prewarmOcr, 1000);
+}
+
 function parsePlate(text) {
   if (!text) return null;
+  console.log("[OCR Parser] Analiza surowego tekstu z OCR:", JSON.stringify(text));
   // Format No.RJR-SER, No. RJR-SER, RJR-SER, RJR SER, DEE-XKY, 338-921
   const m = text.match(/(?:No[.:\s]*)?([A-Z0-9]{3})[-–—\s]([A-Z0-9]{3})/i);
   if (m) {
     const c1 = m[1].toUpperCase(), c2 = m[2].toUpperCase();
     if (!["LIM", "BIK", "HTT", "WWW"].includes(c1) && !["IME", "IKE", "TPS", "COM"].includes(c2)) {
+      console.log(`%c[OCR Parser] ZNALEZIONO TABLICZKĘ (3-3): ${c1}-${c2}`, "color:#10b981; font-weight:bold;");
       return `${c1}-${c2}`;
+    } else {
+      console.log(`[OCR Parser] Odrzucono dopasowanie (blacklist): ${c1}-${c2}`);
     }
   }
   const m6 = text.match(/(?:No[.:\s]*)?([A-Z0-9]{6})/i);
   if (m6) {
     const c = m6[1].toUpperCase();
     if (!["LIMEBI", "LIMEAP", "HTTPS", "HTTP"].includes(c)) {
-      return `${c.slice(0, 3)}-${c.slice(3)}`;
+      const formatted = `${c.slice(0, 3)}-${c.slice(3)}`;
+      console.log(`%c[OCR Parser] ZNALEZIONO TABLICZKĘ (6-znaków): ${formatted}`, "color:#10b981; font-weight:bold;");
+      return formatted;
     }
   }
+  console.log("[OCR Parser] Brak wzorca tabliczki (No.XXX-XXX / XXX-XXX) w tym tekście.");
   return null;
 }
 
 async function tryOcrLimePlate(imageSource) {
-  if (!imageSource) return null;
+  if (!imageSource) {
+    console.warn("[OCR] Brak źródła obrazu.");
+    return null;
+  }
+  const tStart = performance.now();
+  console.log("[OCR] >>> ROZPOCZYNAM ODCZYT TABLICZKI LIME Z OBRAZU <<<");
   try {
     let bmp;
     if (imageSource instanceof Blob) {
+      console.log(`[OCR] Tworzenie ImageBitmap z Bloba (rozmiar: ${(imageSource.size / 1024).toFixed(1)} KB, type: ${imageSource.type})...`);
       bmp = await createImageBitmap(imageSource);
     } else if (imageSource instanceof HTMLVideoElement || imageSource instanceof HTMLImageElement || imageSource instanceof HTMLCanvasElement) {
+      console.log("[OCR] Tworzenie ImageBitmap z elementu wideo/obrazu...");
       bmp = await createImageBitmap(imageSource);
     }
-    if (!bmp) return null;
+    if (!bmp) {
+      console.warn("[OCR] Nie udało się utworzyć ImageBitmap.");
+      return null;
+    }
 
     const maxW = 1000;
     const scale = Math.min(1, maxW / bmp.width);
     const w = Math.round(bmp.width * scale);
     const h = Math.round(bmp.height * scale);
+    console.log(`[OCR] Klatka oryginalna: ${bmp.width}x${bmp.height}px -> Przeskalowana do: ${w}x${h}px (scale: ${scale.toFixed(2)})`);
 
     const baseCanvas = document.createElement("canvas");
     baseCanvas.width = w;
@@ -233,49 +383,61 @@ async function tryOcrLimePlate(imageSource) {
     baseCtx.drawImage(bmp, 0, 0, w, h);
     bmp.close?.();
 
+    console.log(`[OCR] Sprawdzam stan workera Tesseract (czy gotowy: ${ocrWorkerReady ? "TAK" : "NIE - czekam na inicjalizację..."})...`);
     const worker = await Promise.race([
       getOcrWorker(),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 4000)),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("OCR worker init timeout (8s)")), 8000)),
     ]);
 
-    // Paski do przetestowania (dół pod kodem QR i ewentualnie góra nad kodem QR)
+    // Paski do przetestowania (dół pod kodem QR i góra nad kodem QR)
     const strips = [
-      { y: 0.48, h: 0.24 }, // główny pas bezpośrednio pod QR
-      { y: 0.58, h: 0.24 }, // nieco niżej
-      { y: 0.18, h: 0.24 }, // nad kodem QR
+      { name: "dół_główny (y: 48%-72%)", y: 0.48, h: 0.24 },
+      { name: "dół_niższy (y: 58%-82%)", y: 0.58, h: 0.24 },
+      { name: "góra (y: 18%-42%)", y: 0.18, h: 0.24 },
     ];
 
     const stripCanvas = document.createElement("canvas");
     const stripCtx = stripCanvas.getContext("2d", { willReadFrequently: true });
 
-    for (const s of strips) {
+    for (let i = 0; i < strips.length; i++) {
+      const s = strips[i];
+      const tStrip = performance.now();
       const sw = Math.floor(w * 0.85);
       const sh = Math.floor(h * s.h);
+      const sx = Math.floor(w * 0.075);
+      const sy = Math.floor(h * s.y);
+
       stripCanvas.width = sw;
       stripCanvas.height = sh;
-      stripCtx.drawImage(
-        baseCanvas,
-        Math.floor(w * 0.075), Math.floor(h * s.y), sw, sh,
-        0, 0, sw, sh
-      );
+      stripCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
 
+      console.log(`[OCR] Skanowanie paska ${i + 1}/${strips.length}: ${s.name} [x:${sx}, y:${sy}, ${sw}x${sh}px]...`);
       const res = await Promise.race([
         worker.recognize(stripCanvas),
-        new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 3000)),
+        new Promise((_, rej) => setTimeout(() => rej(new Error(`Pasek ${s.name} timeout (5s)`)), 5000)),
       ]);
 
-      const plate = parsePlate(res?.data?.text);
-      if (plate) return plate;
+      const rawText = res?.data?.text?.trim() || "";
+      const stripDuration = (performance.now() - tStrip).toFixed(0);
+      console.log(`[OCR] Wynik paska ${i + 1} (${s.name}) w ${stripDuration} ms:`, JSON.stringify(rawText));
+
+      const plate = parsePlate(rawText);
+      if (plate) {
+        console.log(`%c[OCR SUKCES] Znaleziono numer ${plate} na pasku ${s.name} (całkowity czas OCR: ${(performance.now() - tStart).toFixed(0)} ms)`, "color:#10b981; font-weight:bold; font-size:13px;");
+        return plate;
+      }
     }
   } catch (e) {
-    console.warn("OCR fallback na kod z QR:", e);
+    console.error("[OCR BŁĄD / WYJĄTEK]", e);
   }
+  console.warn(`[OCR BRAK TABLICZKI] Nie udało się wyodrębnić numeru tabliczki w ${(performance.now() - tStart).toFixed(0)} ms. Używam kodu QR jako fallback.`);
   return null;
 }
 
 /* ---------- Krok 1: kod QR skanowany na żywo ---------- */
 // Operator, numer i informacja, czy hulajnoga była już dziś zgłoszona (backend)
 async function checkCurrent(code, operator, photoSource) {
+  console.log("[Check] Rozpoczynam weryfikację:", { code, operator, hasPhotoSource: !!photoSource });
   const mine = current;
   mine.status = "analyzing";
   mine.analyzingMsg = "Sprawdzam kod…";
@@ -284,19 +446,24 @@ async function checkCurrent(code, operator, photoSource) {
   let detectedId = null;
   const isLime = (typeof code === "string" && /li\.me|lime/i.test(code)) || operator === "lime";
   if (isLime && photoSource) {
+    console.log("[Check] Wykryto hulajnogę Lime. Próbuję odczytać numer tabliczki OCR...");
     mine.analyzingMsg = "Odczytuję numer z naklejki…";
     renderStart();
     detectedId = await tryOcrLimePlate(photoSource);
+    console.log("[Check] Rezultat OCR dla Lime:", detectedId || "(brak - fallback na kod QR)");
   }
 
   try {
+    const payload = { code, operator, id: detectedId || undefined };
+    console.log("[Check] Wysyłam żądanie POST /api/check:", payload);
     const r = await fetch("/api/check", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code, operator, id: detectedId || undefined }),
+      body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error(String(r.status));
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const d = await r.json();
+    console.log("[Check] Odpowiedź serwera /api/check:", d);
     if (current !== mine) return;
     mine.code = d.code;
     mine.id = d.id;
@@ -308,7 +475,8 @@ async function checkCurrent(code, operator, photoSource) {
       mine.operatorName = d.operator.name;
       mine.status = d.duplicate ? "reported" : scooters.some((s) => idKey(s) === idKey(mine)) ? "onlist" : "ok";
     }
-  } catch {
+  } catch (err) {
+    console.error("[Check] Błąd żądania /api/check:", err);
     if (current === mine) mine.status = "error";
   }
   if (current !== mine) return;
@@ -439,6 +607,8 @@ $("doc-back").onclick = () => {
 let stream = null;
 let scanning = false;
 async function openScanner() {
+  console.log("[Scanner] Otwieranie widoku skanera na żywo...");
+  prewarmOcr(); // upewniamy się, że OCR i jsQR są rozgrzewane w tle
   if (!loc) locate();
   discardCurrent();
   scooters = [];
@@ -450,23 +620,36 @@ async function openScanner() {
     frame.className = "absolute inset-[18%] rounded-lg border-2 border-white/80 pointer-events-none transition-all duration-300";
   }
   $("scan-msg").innerHTML = "Włączam aparat…";
+  const tScanStart = performance.now();
   try {
+    console.log("[Camera] Żądanie strumienia getUserMedia (environment, ideal 1920)...");
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } }, audio: false });
+    const track = stream.getVideoTracks()[0];
+    const settings = track?.getSettings() || {};
+    console.log(`[Camera] Kamera uruchomiona: ${settings.width || "?"}x${settings.height || "?"} @ ${settings.frameRate || "?"}fps (label: ${track?.label || "kamera"})`);
     const v = $("video");
     v.srcObject = stream;
     await v.play();
+    console.log(`[Camera] Odtwarzanie wideo aktywne (${v.videoWidth}x${v.videoHeight}px). Rozpoczynam pętlę detekcji QR.`);
     $("scan-msg").innerHTML = "Szukam kodu QR…";
     scanning = true;
     const c = document.createElement("canvas");
+    let frameCount = 0;
     const tick = async () => {
       if (!scanning || current !== mine) return;
       if (v.videoWidth) {
+        frameCount++;
         const s = Math.min(1, 720 / v.videoWidth);
-        c.width = v.videoWidth * s;
-        c.height = v.videoHeight * s;
+        c.width = Math.round(v.videoWidth * s);
+        c.height = Math.round(v.videoHeight * s);
         c.getContext("2d", { willReadFrequently: true }).drawImage(v, 0, 0, c.width, c.height);
+        
+        if (frameCount % 20 === 1) {
+          console.log(`[Scanner Loop] Przetwarzam klatkę #${frameCount} (${c.width}x${c.height}px)...`);
+        }
         const code = await decodeCanvas(c);
         if (code && scanning && current === mine) {
+          console.log(`%c[Scanner QR SUKCES] ZNALEZIONO KOD QR: "${code}" w ${(performance.now() - tScanStart).toFixed(0)} ms (klatka #${frameCount})`, "color:#10b981; font-weight:bold; font-size:13px;");
           scanning = false; // zatrzymaj pętlę detekcji
           navigator.vibrate?.([40, 30, 60]);
 
@@ -477,10 +660,12 @@ async function openScanner() {
           $("scan-msg").innerHTML = `<span class="text-emerald-500 font-medium">✓ Kod odczytany!</span>`;
 
           // Zdjęcie kodu QR = klatka z podglądu w chwili odczytu
+          console.log("[Scanner] Zapisuję klatkę wideo do zdjęcia QR...");
           mine.qr = await makePhoto(v);
 
-          // Płynna pauza (~400 ms), by użytkownik zauważył sukces
-          await new Promise((res) => setTimeout(res, 400));
+          // Płynna pauza (~800 ms), kamera pozostaje włączona w tle
+          console.log("[Scanner] Pauza 800 ms (zielona ramka)...");
+          await new Promise((res) => setTimeout(res, 800));
 
           stopScanner();
           return checkCurrent(code, null, mine.qr.blob);
@@ -489,11 +674,13 @@ async function openScanner() {
       setTimeout(tick, 120);
     };
     tick();
-  } catch {
+  } catch (err) {
+    console.error("[Camera BŁĄD] Brak dostępu lub błąd aparatu:", err);
     $("scan-msg").textContent = "Brak dostępu do aparatu. Zezwól na aparat w ustawieniach przeglądarki albo wpisz numer ręcznie.";
   }
 }
 function stopScanner() {
+  console.log("[Scanner] Zatrzymywanie kamery i skanera.");
   scanning = false;
   stream?.getTracks().forEach((t) => t.stop());
   stream = null;
