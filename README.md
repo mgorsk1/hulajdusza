@@ -15,7 +15,7 @@ Kreator w 4 krokach:
 1. **Kod QR.** Skanowany wyłącznie na żywo aparatem. Gdy tylko kod zostanie odczytany, aplikacja sama robi zdjęcie klatki (to zdjęcie kodu QR). Odczyt robi przeglądarka (BarcodeDetector lub jsQR), a backend (`/api/check`) tylko ustala operatora i numer oraz sprawdza, czy hulajnoga była już dziś zgłoszona. Gdy skanowanie się nie da, jest wpis numeru ręcznie.
 2. **Zdjęcie hulajnogi.** Co najmniej jedno (do dwóch) zdjęcie pokazujące, gdzie i jak stoi hulajnoga. Do maila trafia razem ze zdjęciem kodu QR. Przy numerze wpisanym ręcznie (bez zdjęcia kodu) wystarcza jedno zdjęcie hulajnogi. Jedno zgłoszenie dotyczy jednej hulajnogi: „Dalej” prowadzi od razu do kroku 3.
 3. **Kopia.** Opcjonalny adres e-mail użytkownika trafia do DW. Zapamiętywany tylko w `localStorage`, w bazie go nie ma.
-4. **Potwierdzenie.** `/api/preview` zwraca gotowe wiadomości (nieedytowalne), użytkownik zaznacza „Sprawdziłem”, przechodzi Turnstile i wysyła. Dopiero `/api/report` wysyła maile ze zdjęciami w załącznikach.
+4. **Potwierdzenie.** `/api/preview` zwraca gotowe wiadomości (nieedytowalne), użytkownik przechodzi Turnstile i zatwierdza („Wygląda ok, wysyłamy!”). Dopiero `/api/report` wysyła maile ze zdjęciami w załącznikach.
 
 Do bazy trafiają wyłącznie statystyki (uuid, adres, GPS, operator, liczba hulajnóg). Zdjęcia, treść maila i adres użytkownika nie są zapisywane.
 

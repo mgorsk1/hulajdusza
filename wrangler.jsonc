@@ -22,9 +22,9 @@
     // Adres nadawcy (domena musi być dodana w Email Service)
     "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
     // "false" = maile naprawdę wychodzą. Domyślnie tylko logi (bezpieczne w dev).
-    "EMAIL_DRY_RUN": "true",
+    "EMAIL_DRY_RUN": "false",
     // "cloudflare" = Email Service (Workers Paid) albo "resend" = darmowy plan Resend (sekret: wrangler secret put RESEND_API_KEY)
-    "MAIL_PROVIDER": "cloudflare",
+    "MAIL_PROVIDER": "resend",
     // Klucz testowy Turnstile: ZAWSZE wymusza interaktywne potwierdzenie i zawsze przechodzi.
     // Na produkcji podmień na własny klucz i ustaw sekret: task secret:turnstile
     "TURNSTILE_SITE_KEY": "3x00000000000000000000FF",

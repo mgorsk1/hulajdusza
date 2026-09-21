@@ -443,14 +443,12 @@ function renderMails(data) {
 }
 
 function updateSend() {
-  $("send").disabled = !($("okchk").checked && tsToken);
+  $("send").disabled = !tsToken;
 }
-$("okchk").onchange = updateSend;
 
 async function openConfirm() {
   const err = $("err3");
   err.classList.add("hidden");
-  $("okchk").checked = false;
   $("mails").innerHTML = `<p class="text-sm text-muted">Przygotowuję wiadomość…</p>`;
   show("confirm");
   updateSend();
@@ -533,7 +531,7 @@ $("send").onclick = async () => {
     };
     showErr3(msgs[e.message] || "Coś poszło nie tak. Spróbuj ponownie.");
   } finally {
-    btn.textContent = "Wyślij wiadomość";
+    btn.textContent = "Wygląda ok, wysyłamy!";
     if (window.turnstile && tsWidget !== null) {
       turnstile.reset(tsWidget);
       tsToken = "";
@@ -542,11 +540,9 @@ $("send").onclick = async () => {
   }
 };
 
-const sentAll = [];
 function finish(data) {
   const sent = data.results.filter((r) => r.status === "sent");
   const failed = data.results.filter((r) => r.status === "failed");
-  sentAll.push(...sent);
   const sentKeys = new Set(sent.map((r) => r.operator));
   scooters.filter((s) => sentKeys.has(s.operator)).forEach((s) => freePhotos(s.photos));
   scooters = scooters.filter((s) => !sentKeys.has(s.operator));
@@ -557,17 +553,11 @@ function finish(data) {
     showErr3(`Nie udało się wysłać do: ${failed.map((f) => f.name).join(", ")}. Spróbuj ponownie.`);
     return openConfirm();
   }
-  $("done-list").innerHTML = sentAll
-    .map((r) => `<li>${esc(r.name)}: wysłano (${r.count} ${r.count === 1 ? "hulajnoga" : "hulajnogi"})${cc ? `, kopia do ${esc(cc)}` : ""}</li>`)
-    .join("");
   setQuota(data.quota);
-  $("done-quota").className = "text-sm text-danger";
-  $("done-quota").textContent = data.quota?.remaining === 0 ? quotaText(data.quota) : "";
   show("done");
 }
 
 $("again").onclick = () => {
-  sentAll.length = 0;
   scooters.forEach((s) => freePhotos(s.photos));
   scooters = [];
   discardCurrent();

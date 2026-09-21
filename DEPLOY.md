@@ -184,16 +184,68 @@ Kamera i GPS działają tylko po HTTPS, a adres z kroku 7 jest HTTPS. Otwórz go
 1. Dotknij „Zeskanuj kod QR” i skieruj aparat na kod wyświetlony na ekranie (np. z tekstem `https://li.me/scan/123-456`). Aplikacja odczyta go sama.
 2. Sprawdź, czy rozpoznało operatora i numer, potem zrób zdjęcie hulajnogi (krok 2).
 3. Krok 2: wpisz swój e-mail (albo „Pomiń”).
-4. Krok 3: sprawdź wiadomość, zaznacz „Sprawdziłem”, przejdź Turnstile, „Wyślij wiadomość”.
+4. Krok 3: sprawdź wiadomość, przejdź Turnstile, kliknij „Wygląda ok, wysyłamy!”.
 5. W `npx wrangler tail` powinien pojawić się log `[DRY RUN] od: ... do: ... temat: ...` z liczbą załączników.
 6. Wejdź na `/stats` i `/map`. Zgłoszenie powinno się tam pojawić.
 7. Spróbuj zgłosić **to samo** ponownie: aplikacja powinna zablokować drugie zgłoszenie tego dnia.
 
 
-## 9. Własna domena (opcjonalnie, zalecane)
+## 9. Własna subdomena (np. zgloszenia.twoja-domena.pl lub hulajdusza.twoja-domena.pl)
 
-1. Dashboard → **Workers & Pages** → `hulajdusza` → **Settings** → **Domains & Routes** → **Add** → **Custom Domain** → np. `zgloszenia.twoja-domena.pl` (domena musi być na Cloudflare DNS).
-2. Dodaj ten host do widgetu Turnstile (krok 3).
+Aby aplikacja działała pod Twoją subdomeną (np. `hulajdusza.twoja-domena.pl` zamiast `*.workers.dev`):
+
+### Krok 1: Podpięcie subdomeny do Workera
+Główna domena (`twoja-domena.pl`) musi być dodana w Twoim koncie Cloudflare i obsługiwana przez Cloudflare DNS.
+
+**Sposób A: Przez Dashboard Cloudflare (najprostszy)**:
+1. W Cloudflare Dashboard przejdź do: **Workers & Pages** → **Overview** → kliknij `hulajdusza`.
+2. Zakładka **Settings** → **Domains & Routes**.
+3. W sekcji **Custom Domains** kliknij **Add** → **Custom Domain**.
+4. Wpisz pełną subdomenę, np. `hulajdusza.twoja-domena.pl` (albo `zgloszenia.twoja-domena.pl`) i kliknij **Add Custom Domain**.
+5. Cloudflare automatycznie:
+   - Utworzy rekord DNS w strefie Twojej domeny.
+   - Wygeneruje i podepnie darmowy certyfikat SSL/TLS (HTTPS).
+   - Skonfiguruje routing do Workera.
+
+**Sposób B: Przez konfigurację `wrangler.jsonc`**:
+Możesz też dodać trasę bezpośrednio w pliku `wrangler.jsonc`:
+```jsonc
+"routes": [
+  { "pattern": "hulajdusza.twoja-domena.pl/*", "custom_domain": true }
+]
+```
+I uruchomić `npx wrangler deploy`.
+
+---
+
+### Krok 2: Zaktualizuj Turnstile (anty-spam)
+Widget Cloudflare Turnstile weryfikuje domenę, z której przychodzi zgłoszenie:
+1. Przejdź do: Cloudflare Dashboard → **Turnstile**.
+2. Wybierz swój widget (utworzony w kroku 3).
+3. W sekcji **Domains** dodaj swoją subdomenę (np. `hulajdusza.twoja-domena.pl`) lub domenę główną (`twoja-domena.pl`).
+4. Zapisz zmiany.
+
+---
+
+### Krok 3: Dopasuj adres nadawcy maili (`FROM_EMAIL`)
+W pliku `wrangler.jsonc` ustaw adres e-mail nadawcy zgodny z Twoją domeną:
+```jsonc
+"vars": {
+  "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
+  // ...
+}
+```
+Następnie wdróż zmiany:
+```bash
+npx wrangler deploy
+```
+
+---
+
+### Krok 4: Wyłączenie domyślnego adresu *.workers.dev (opcjonalnie)
+Gdy subdomena już działa i chcesz, aby aplikacja była dostępna **wyłącznie** pod Twoją subdomeną:
+1. W Dashboardzie: **Workers & Pages** → `hulajdusza` → **Settings** → **Domains & Routes**.
+2. Przy domenie `*.workers.dev` kliknij menu z trzema kropkami `...` → **Disable**.
 
 ## 10. Włączenie prawdziwej wysyłki
 
