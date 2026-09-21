@@ -42,14 +42,14 @@ export const OPERATORS: Operator[] = [
     match: "dott\\.com|ridedott|dott\\.app|\\bdott\\b",
     email: "support@ridedott.com",
   },
-  {
-    key: "test",
-    name: "Test",
-    color: "#ff0000",
-    dark: "#ff0000",
-    match: "test|testowy|mariusz",
-    email: "gorskimariusz13@gmail.com",
-  },
+  // {
+  //   key: "test",
+  //   name: "Test",
+  //   color: "#ff0000",
+  //   dark: "#ff0000",
+  //   match: "test|testowy|mariusz",
+  //   email: "gorskimariusz13@gmail.com",
+  // },
 ];
 
 export const operatorByKey = (key: string) => OPERATORS.find((o) => o.key === key);
