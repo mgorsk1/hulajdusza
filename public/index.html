@@ -122,6 +122,12 @@
         <button id="m-ok" class="btn btn-primary">Dalej</button>
         <button id="m-back" class="btn btn-ghost">Wróć</button>
       </div>
+
+      <!-- Podgląd diagnostyczny klatek OCR w trybie debug -->
+      <details id="ocr-debug-box" class="hidden border border-default rounded-lg p-3 bg-muted/40 text-xs">
+        <summary class="font-semibold cursor-pointer text-muted hover:text-[hsl(var(--foreground))] select-none">🔍 Podgląd klatek i wycinków OCR (Debug)</summary>
+        <div id="ocr-debug-content" class="mt-3 space-y-3"></div>
+      </details>
     </section>
 
     <!-- Krok 2: kopia -->

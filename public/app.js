@@ -349,6 +349,54 @@ function parsePlate(text) {
   return null;
 }
 
+window.__lastOcrDebug = null;
+
+function renderOcrDebug() {
+  const box = $("ocr-debug-box");
+  const content = $("ocr-debug-content");
+  if (!box || !content) return;
+  const isDebug = localStorage.getItem("debug") === "1" || new URLSearchParams(location.search).has("debug");
+  if (!window.__lastOcrDebug) {
+    box.classList.add("hidden");
+    return;
+  }
+  box.classList.remove("hidden");
+  if (isDebug) {
+    box.open = true;
+  }
+
+  const d = window.__lastOcrDebug;
+  content.innerHTML = `
+    <div class="space-y-3">
+      <div class="flex items-center justify-between text-muted text-[11px]">
+        <span>Klatka wejściowa: ${d.width}x${d.height}px</span>
+        <span>Łączny czas: ${d.totalDuration} ms</span>
+      </div>
+      <div>
+        <p class="font-medium text-xs mb-1">Złapana klatka z zaznaczonymi paskami skanowania:</p>
+        <img src="${d.annotatedFrameUrl}" alt="Klatka OCR" class="w-full rounded border border-default bg-black/40">
+      </div>
+      <div class="space-y-2">
+        <p class="font-medium text-xs">Paski przekazane do Tesseract.js:</p>
+        ${d.strips.map((s, i) => `
+          <div class="p-2 rounded border border-default bg-card/80 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-xs" style="color:${s.color}">${i + 1}. ${esc(s.name)} (${s.duration} ms)</span>
+              <span class="text-xs ${s.parsedPlate ? 'text-emerald-500 font-bold' : 'text-muted'}">${s.parsedPlate ? '✓ ' + esc(s.parsedPlate) : '✗ brak tabliczki'}</span>
+            </div>
+            <img src="${s.dataUrl}" alt="${esc(s.name)}" class="w-full rounded border border-default/60 bg-black/30">
+            <div class="bg-muted/80 p-1.5 rounded font-mono text-[11px] break-all leading-snug">
+              <span class="text-muted block text-[10px]">Rozpoznany tekst Tesseract:</span>
+              ${esc(s.rawText || "(pusty wynik)")}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+window.renderOcrDebug = renderOcrDebug;
+
 async function tryOcrLimePlate(imageSource) {
   if (!imageSource) {
     console.warn("[OCR] Brak źródła obrazu.");
@@ -391,13 +439,23 @@ async function tryOcrLimePlate(imageSource) {
 
     // Paski do przetestowania (dół pod kodem QR i góra nad kodem QR)
     const strips = [
-      { name: "dół_główny (y: 48%-72%)", y: 0.48, h: 0.24 },
-      { name: "dół_niższy (y: 58%-82%)", y: 0.58, h: 0.24 },
-      { name: "góra (y: 18%-42%)", y: 0.18, h: 0.24 },
+      { name: "dół_główny (y: 48%-72%)", y: 0.48, h: 0.24, color: "#10b981" },
+      { name: "dół_niższy (y: 58%-82%)", y: 0.58, h: 0.24, color: "#3b82f6" },
+      { name: "góra (y: 18%-42%)", y: 0.18, h: 0.24, color: "#f59e0b" },
     ];
 
+    // Przygotowanie klatki z adnotacjami (obrysami pasków) do debugowania
+    const annotCanvas = document.createElement("canvas");
+    annotCanvas.width = w;
+    annotCanvas.height = h;
+    const annotCtx = annotCanvas.getContext("2d");
+    annotCtx.drawImage(baseCanvas, 0, 0);
+
+    const debugStrips = [];
     const stripCanvas = document.createElement("canvas");
     const stripCtx = stripCanvas.getContext("2d", { willReadFrequently: true });
+
+    let detectedPlate = null;
 
     for (let i = 0; i < strips.length; i++) {
       const s = strips[i];
@@ -407,9 +465,19 @@ async function tryOcrLimePlate(imageSource) {
       const sx = Math.floor(w * 0.075);
       const sy = Math.floor(h * s.y);
 
+      // Rysuj ramkę na klatce poglądowej
+      annotCtx.strokeStyle = s.color;
+      annotCtx.lineWidth = 3;
+      annotCtx.strokeRect(sx, sy, sw, sh);
+      annotCtx.fillStyle = s.color;
+      annotCtx.font = "bold 14px sans-serif";
+      annotCtx.fillText(`${i + 1}. ${s.name}`, sx + 4, Math.max(16, sy - 4));
+
       stripCanvas.width = sw;
       stripCanvas.height = sh;
       stripCtx.drawImage(baseCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      const stripDataUrl = stripCanvas.toDataURL("image/jpeg", 0.9);
 
       console.log(`[OCR] Skanowanie paska ${i + 1}/${strips.length}: ${s.name} [x:${sx}, y:${sy}, ${sw}x${sh}px]...`);
       const res = await Promise.race([
@@ -418,15 +486,37 @@ async function tryOcrLimePlate(imageSource) {
       ]);
 
       const rawText = res?.data?.text?.trim() || "";
-      const stripDuration = (performance.now() - tStrip).toFixed(0);
+      const stripDuration = Math.round(performance.now() - tStrip);
       console.log(`[OCR] Wynik paska ${i + 1} (${s.name}) w ${stripDuration} ms:`, JSON.stringify(rawText));
 
       const plate = parsePlate(rawText);
-      if (plate) {
+      debugStrips.push({
+        name: s.name,
+        color: s.color,
+        dataUrl: stripDataUrl,
+        rawText,
+        parsedPlate: plate,
+        duration: stripDuration,
+      });
+
+      if (plate && !detectedPlate) {
+        detectedPlate = plate;
         console.log(`%c[OCR SUKCES] Znaleziono numer ${plate} na pasku ${s.name} (całkowity czas OCR: ${(performance.now() - tStart).toFixed(0)} ms)`, "color:#10b981; font-weight:bold; font-size:13px;");
-        return plate;
+        break;
       }
     }
+
+    window.__lastOcrDebug = {
+      width: w,
+      height: h,
+      annotatedFrameUrl: annotCanvas.toDataURL("image/jpeg", 0.8),
+      strips: debugStrips,
+      totalDuration: Math.round(performance.now() - tStart),
+      detectedPlate,
+    };
+    renderOcrDebug();
+
+    return detectedPlate;
   } catch (e) {
     console.error("[OCR BŁĄD / WYJĄTEK]", e);
   }
@@ -716,6 +806,7 @@ function openManual(isConfirmation = false) {
 
   if (current.operator) $("m-op").value = current.operator;
   $("m-id").value = current.id || (current.code ? current.code : "");
+  renderOcrDebug();
   show("manual");
   $("m-id").focus();
 }
