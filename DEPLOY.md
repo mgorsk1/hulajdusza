@@ -190,62 +190,107 @@ Kamera i GPS działają tylko po HTTPS, a adres z kroku 7 jest HTTPS. Otwórz go
 7. Spróbuj zgłosić **to samo** ponownie: aplikacja powinna zablokować drugie zgłoszenie tego dnia.
 
 
-## 9. Własna subdomena (np. zgloszenia.twoja-domena.pl lub hulajdusza.twoja-domena.pl)
+## 9. Konfiguracja własnej subdomeny w Cloudflare (np. hulajdusza.twoja-domena.pl)
 
-Aby aplikacja działała pod Twoją subdomeną (np. `hulajdusza.twoja-domena.pl` zamiast `*.workers.dev`):
+Aby aplikacja działała pod Twoją własną subdomeną (np. `hulajdusza.twoja-domena.pl` lub `zgloszenia.twoja-domena.pl`) z pełnym wsparciem dla HTTPS, kamery i geolokalizacji:
 
-### Krok 1: Podpięcie subdomeny do Workera
-Główna domena (`twoja-domena.pl`) musi być dodana w Twoim koncie Cloudflare i obsługiwana przez Cloudflare DNS.
+---
 
-**Sposób A: Przez Dashboard Cloudflare (najprostszy)**:
-1. W Cloudflare Dashboard przejdź do: **Workers & Pages** → **Overview** → kliknij `hulajdusza`.
-2. Zakładka **Settings** → **Domains & Routes**.
-3. W sekcji **Custom Domains** kliknij **Add** → **Custom Domain**.
-4. Wpisz pełną subdomenę, np. `hulajdusza.twoja-domena.pl` (albo `zgloszenia.twoja-domena.pl`) i kliknij **Add Custom Domain**.
-5. Cloudflare automatycznie:
-   - Utworzy rekord DNS w strefie Twojej domeny.
-   - Wygeneruje i podepnie darmowy certyfikat SSL/TLS (HTTPS).
-   - Skonfiguruje routing do Workera.
+### Krok 1: Dodanie domeny głównej do Cloudflare (jeśli jeszcze jej tam nie ma)
 
-**Sposób B: Przez konfigurację `wrangler.jsonc`**:
-Możesz też dodać trasę bezpośrednio w pliku `wrangler.jsonc`:
+Jeśli Twoja domena (`twoja-domena.pl`) jest zarejestrowana u zewnętrznego rejestratora (np. OVH, cyber_Folks, domeny.pl, SeoHost, Namecheap):
+
+1. Zaloguj się do [Cloudflare Dashboard](https://dash.cloudflare.com).
+2. Kliknij **Websites** w menu bocznym → **Add a site**.
+3. Wpisz nazwę swojej domeny (np. `twoja-domena.pl`) i wybierz plan **Free**.
+4. Cloudflare przeskanuje istniejące rekordy DNS – zatwierdź je.
+5. Cloudflare wyświetli 2 serwery nazw (Nameservers), np.:
+   - `ada.ns.cloudflare.com`
+   - `bob.ns.cloudflare.com`
+6. Zaloguj się do panelu swojego rejestratora domeny i zmień delegację DNS domeny na powyższe serwery Cloudflare.
+7. Gdy strefa w Cloudflare stanie się aktywna (status **Active**), możesz przejść do konfiguracji subdomeny.
+
+---
+
+### Krok 2: Podpięcie subdomeny do Workera (Custom Domains)
+
+Najwygodniejszym i zalecanym sposobem jest mechanizm **Custom Domains** w Cloudflare Workers, który automatycznie zarządza rekordami DNS i certyfikatem SSL:
+
+1. W Cloudflare Dashboard przejdź do: **Workers & Pages** → **Overview** → kliknij swój Worker `hulajdusza`.
+2. Otwórz zakładkę **Settings** → **Domains & Routes**.
+3. W sekcji **Custom Domains** kliknij przycisk **Add** → **Custom Domain**.
+4. Wpisz pożądaną subdomenę, np.:
+   ```text
+   hulajdusza.twoja-domena.pl
+   ```
+   *(albo `zgloszenia.twoja-domena.pl`)*
+5. Kliknij **Add Custom Domain**.
+
+**Co Cloudflare robi w tym momencie automatycznie:**
+- Tworzy dedykowany rekord DNS w strefie Twojej domeny z włączonym proxy (pomarańczowa chmurka).
+- Wystawia darmowy certyfikat SSL/TLS (Edge Certificate) dla tej subdomeny.
+- Konfiguruje routing zapytań bezpośrednio do kodu Workera.
+- Status subdomeny zmieni się z `Initializing` na `Active` w ciągu 1–3 minut.
+
+*(Alternatywnie przez CLI)*: Możesz też dodać trasę do `wrangler.jsonc`:
 ```jsonc
 "routes": [
   { "pattern": "hulajdusza.twoja-domena.pl/*", "custom_domain": true }
 ]
 ```
-I uruchomić `npx wrangler deploy`.
+i wykonać `npx wrangler deploy`.
 
 ---
 
-### Krok 2: Zaktualizuj Turnstile (anty-spam)
-Widget Cloudflare Turnstile weryfikuje domenę, z której przychodzi zgłoszenie:
-1. Przejdź do: Cloudflare Dashboard → **Turnstile**.
-2. Wybierz swój widget (utworzony w kroku 3).
-3. W sekcji **Domains** dodaj swoją subdomenę (np. `hulajdusza.twoja-domena.pl`) lub domenę główną (`twoja-domena.pl`).
-4. Zapisz zmiany.
+### Krok 3: Wymuszenie HTTPS i ustawienia SSL/TLS w Cloudflare
+
+Aparat fotograficzny i geolokalizacja w przeglądarkach na telefonie wymagają bezpiecznego połączenia HTTPS. Upewnij się, że w Cloudflare włączone jest automatyczne przekierowanie:
+
+1. W Cloudflare Dashboard przejdź do swojej domeny: **Websites** → `twoja-domena.pl`.
+2. W menu bocznym wybierz **SSL/TLS** → **Edge Certificates**.
+3. Włącz opcję **Always Use HTTPS** (przekierowuje cały ruch `http://` na `https://`).
+4. Upewnij się, że **Automatic HTTPS Rewrites** jest włączone.
+5. W zakładce **SSL/TLS** → **Overview** upewnij się, że tryb szyfrowania to co najmniej **Full** lub **Full (strict)**.
 
 ---
 
-### Krok 3: Dopasuj adres nadawcy maili (`FROM_EMAIL`)
-W pliku `wrangler.jsonc` ustaw adres e-mail nadawcy zgodny z Twoją domeną:
-```jsonc
-"vars": {
-  "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
-  // ...
-}
-```
-Następnie wdróż zmiany:
-```bash
-npx wrangler deploy
-```
+### Krok 4: Dodanie subdomeny do widgetu Turnstile (ochrona anty-spam)
+
+Widget Cloudflare Turnstile akceptuje zapytania tylko ze zdefiniowanych domen:
+
+1. W menu bocznym Cloudflare przejdź do **Turnstile**.
+2. Kliknij **Settings** / edytuj widget używany w aplikacji.
+3. W polu **Domains** (lub **Allowed Domains**) dodaj:
+   - Pełną subdomenę: `hulajdusza.twoja-domena.pl` (lub z wildcardem: `*.twoja-domena.pl`).
+4. Kliknij **Save**.
 
 ---
 
-### Krok 4: Wyłączenie domyślnego adresu *.workers.dev (opcjonalnie)
-Gdy subdomena już działa i chcesz, aby aplikacja była dostępna **wyłącznie** pod Twoją subdomeną:
-1. W Dashboardzie: **Workers & Pages** → `hulajdusza` → **Settings** → **Domains & Routes**.
-2. Przy domenie `*.workers.dev` kliknij menu z trzema kropkami `...` → **Disable**.
+### Krok 5: Aktualizacja adresu nadawcy (`FROM_EMAIL`) i deploy
+
+1. Otwórz plik `wrangler.jsonc` i ustaw adres e-mail nadawcy w swojej domenie:
+   ```jsonc
+   "vars": {
+     "FROM_EMAIL": "zgloszenia@twoja-domena.pl",
+     // ...
+   }
+   ```
+2. Wdróż aktualizację:
+   ```bash
+   npx wrangler deploy
+   ```
+
+---
+
+### Krok 6: Wyłączenie domyślnego adresu *.workers.dev (opcjonalnie)
+
+Aby aplikacja nie była dostępna pod publicznym adresem tymczasowym Cloudflare (`hulajdusza.TWOJ-SUBACCOUNT.workers.dev`):
+
+1. Przejdź do: **Workers & Pages** → `hulajdusza` → **Settings** → **Domains & Routes**.
+2. W sekcji **Routes** odszukaj wpis z `*.workers.dev`.
+3. Kliknij menu `...` po prawej stronie i wybierz **Disable**.
+
+Od tego momentu serwis będzie dostępny wyłącznie pod Twoją subdomeną `https://hulajdusza.twoja-domena.pl`.
 
 ## 10. Włączenie prawdziwej wysyłki
 
