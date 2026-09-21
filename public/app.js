@@ -190,44 +190,82 @@ async function getOcrWorker() {
   return ocrWorkerPromise;
 }
 
+function parsePlate(text) {
+  if (!text) return null;
+  // Format No.RJR-SER, No. RJR-SER, RJR-SER, RJR SER, DEE-XKY, 338-921
+  const m = text.match(/(?:No[.:\s]*)?([A-Z0-9]{3})[-–—\s]([A-Z0-9]{3})/i);
+  if (m) {
+    const c1 = m[1].toUpperCase(), c2 = m[2].toUpperCase();
+    if (!["LIM", "BIK", "HTT", "WWW"].includes(c1) && !["IME", "IKE", "TPS", "COM"].includes(c2)) {
+      return `${c1}-${c2}`;
+    }
+  }
+  const m6 = text.match(/(?:No[.:\s]*)?([A-Z0-9]{6})/i);
+  if (m6) {
+    const c = m6[1].toUpperCase();
+    if (!["LIMEBI", "LIMEAP", "HTTPS", "HTTP"].includes(c)) {
+      return `${c.slice(0, 3)}-${c.slice(3)}`;
+    }
+  }
+  return null;
+}
+
 async function tryOcrLimePlate(imageSource) {
   if (!imageSource) return null;
   try {
+    let bmp;
+    if (imageSource instanceof Blob) {
+      bmp = await createImageBitmap(imageSource);
+    } else if (imageSource instanceof HTMLVideoElement || imageSource instanceof HTMLImageElement || imageSource instanceof HTMLCanvasElement) {
+      bmp = await createImageBitmap(imageSource);
+    }
+    if (!bmp) return null;
+
+    const maxW = 1000;
+    const scale = Math.min(1, maxW / bmp.width);
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+
+    const baseCanvas = document.createElement("canvas");
+    baseCanvas.width = w;
+    baseCanvas.height = h;
+    const baseCtx = baseCanvas.getContext("2d", { willReadFrequently: true });
+    baseCtx.drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+
     const worker = await Promise.race([
       getOcrWorker(),
       new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 4000)),
     ]);
-    const { data: { text } } = await Promise.race([
-      worker.recognize(imageSource),
-      new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 5000)),
-    ]);
-    if (!text) return null;
 
-    // Szukamy formatu 3 znaki - 3 znaki (np. DEE-XKY lub 338-921)
-    const fullMatch = text.match(/\b([A-Z0-9]{3})[-–—]([A-Z0-9]{3})\b/i);
-    if (fullMatch) {
-      const cand = `${fullMatch[1]}-${fullMatch[2]}`.toUpperCase();
-      if (!cand.includes("LIME") && !cand.includes("HTTP")) return cand;
-    }
+    // Paski do przetestowania (dół pod kodem QR i ewentualnie góra nad kodem QR)
+    const strips = [
+      { y: 0.48, h: 0.24 }, // główny pas bezpośrednio pod QR
+      { y: 0.58, h: 0.24 }, // nieco niżej
+      { y: 0.18, h: 0.24 }, // nad kodem QR
+    ];
 
-    // Szukamy dwóch słów po 3 znaki (np. "DEE XKY")
-    const words = text.replace(/[^A-Za-z0-9\s-]/g, " ").split(/\s+/).filter(Boolean);
-    for (let i = 0; i < words.length - 1; i++) {
-      const w1 = words[i].toUpperCase(), w2 = words[i + 1].toUpperCase();
-      if (w1.length === 3 && w2.length === 3 && /^[A-Z0-9]{3}$/.test(w1) && /^[A-Z0-9]{3}$/.test(w2)) {
-        if (!["LIM", "BIK", "HTT", "WWW", "APP"].includes(w1) && !["IME", "IKE", "TPS", "COM"].includes(w2)) {
-          return `${w1}-${w2}`;
-        }
-      }
-    }
+    const stripCanvas = document.createElement("canvas");
+    const stripCtx = stripCanvas.getContext("2d", { willReadFrequently: true });
 
-    // Ciąg 6 znaków (np. DEEXKY)
-    const sixMatch = text.match(/\b([A-Z0-9]{6})\b/i);
-    if (sixMatch) {
-      const c = sixMatch[1].toUpperCase();
-      if (!["LIMEBI", "LIMEAP", "HTTPS", "HTTP"].includes(c)) {
-        return `${c.slice(0, 3)}-${c.slice(3)}`;
-      }
+    for (const s of strips) {
+      const sw = Math.floor(w * 0.85);
+      const sh = Math.floor(h * s.h);
+      stripCanvas.width = sw;
+      stripCanvas.height = sh;
+      stripCtx.drawImage(
+        baseCanvas,
+        Math.floor(w * 0.075), Math.floor(h * s.y), sw, sh,
+        0, 0, sw, sh
+      );
+
+      const res = await Promise.race([
+        worker.recognize(stripCanvas),
+        new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 3000)),
+      ]);
+
+      const plate = parsePlate(res?.data?.text);
+      if (plate) return plate;
     }
   } catch (e) {
     console.warn("OCR fallback na kod z QR:", e);
