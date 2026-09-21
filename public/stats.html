@@ -62,29 +62,35 @@
       </span>
     </div>
 
-    <!-- Trzy metryki w jednym rzędzie, kafelki 16:9 -->
+    <!-- Trzy metryki w jednym rzędzie -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6" aria-label="Kluczowe metryki">
-      <article class="md:aspect-video p-4 rounded-lg bg-primary text-primary-foreground flex flex-col">
+      <article class="p-4 rounded-lg bg-primary text-primary-foreground flex flex-col justify-between min-h-[124px] h-full">
         <p class="text-sm md:text-xs opacity-70">Ostatnie 24 godziny</p>
-        <div class="flex items-end justify-between gap-3 mt-auto pt-3">
-          <div>
-            <p id="m24" class="text-5xl font-bold tracking-tight leading-none">–</p>
-            <p id="m24-unit" class="text-sm md:text-xs opacity-70 mt-2">hulajnóg</p>
+        <div class="mt-auto pt-1">
+          <div class="flex items-end justify-between gap-3">
+            <div>
+              <p id="m24" class="text-5xl font-bold tracking-tight leading-none">–</p>
+              <p id="m24-unit" class="text-sm md:text-xs opacity-70 mt-1.5">hulajnóg</p>
+            </div>
+            <p id="m24-trend" class="text-xs font-semibold text-right whitespace-nowrap self-start"></p>
           </div>
-          <p id="m24-trend" class="text-xs font-semibold text-right whitespace-nowrap self-start"></p>
         </div>
       </article>
 
-      <article class="md:aspect-video p-4 rounded-lg border border-default bg-card flex flex-col">
+      <article class="p-4 rounded-lg border border-default bg-card flex flex-col justify-between min-h-[124px] h-full">
         <p class="text-sm md:text-xs text-muted">Lider operatorów</p>
-        <p class="flex-1 flex items-center gap-2 py-2 text-2xl font-bold tracking-tight leading-tight"><span id="lead-dot" class="dot"></span><span id="lead-name">–</span></p>
-        <p id="lead-sub" class="text-sm md:text-xs text-muted"></p>
+        <div class="mt-auto pt-1">
+          <p class="flex items-center gap-2 text-2xl font-bold tracking-tight leading-tight"><span id="lead-dot" class="dot"></span><span id="lead-name">–</span></p>
+          <p id="lead-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+        </div>
       </article>
 
-      <article class="md:aspect-video p-4 rounded-lg border border-default bg-card flex flex-col">
+      <article class="p-4 rounded-lg border border-default bg-card flex flex-col justify-between min-h-[124px] h-full">
         <p class="text-sm md:text-xs text-muted">Najgorsza dzielnica</p>
-        <p id="dist-name" class="flex-1 flex items-center py-2 text-2xl font-bold tracking-tight leading-tight">–</p>
-        <p id="dist-sub" class="text-sm md:text-xs text-muted"></p>
+        <div class="mt-auto pt-1">
+          <p id="dist-name" class="text-2xl font-bold tracking-tight leading-tight">–</p>
+          <p id="dist-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+        </div>
       </article>
     </section>
 

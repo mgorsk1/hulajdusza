@@ -23,6 +23,7 @@ interface Env {
 interface ScooterInput {
   operator: string;
   code: string;
+  id?: string;
   /** Czy pierwsze zdjęcie to zdjęcie kodu QR (przy wpisie ręcznym go nie ma). */
   hasQr?: boolean;
 }
@@ -291,7 +292,7 @@ const publicOperator = (key: string) => {
  * była już dziś zgłoszona. Nic nie zapisuje.
  */
 async function check(request: Request, env: Env): Promise<Response> {
-  let input: { code?: unknown; operator?: unknown };
+  let input: { code?: unknown; operator?: unknown; id?: unknown };
   try {
     input = await request.json();
   } catch {
@@ -301,7 +302,7 @@ async function check(request: Request, env: Env): Promise<Response> {
   if (!code) return json({ error: "bad_code" }, 400);
 
   const op = detectOperator(code) ?? operatorByKey(clean(input.operator, 20));
-  const id = clean(extractScooterId(code), 100);
+  const id = clean(input.id, 100) || clean(extractScooterId(code), 100);
   const duplicate = op ? (await alreadyReported(env, [{ operator: op.key, id }])).length > 0 : false;
   return json({ code, operator: op ? publicOperator(op.key) : null, id, duplicate });
 }
@@ -335,7 +336,8 @@ async function buildDrafts(input: {
     const code = clean(sc?.code, 500);
     const operator = detectOperator(code)?.key ?? sc?.operator;
     if (!code || !operator || !operatorByKey(operator)) return { ok: false as const, error: "bad_scooters", status: 400 as const };
-    items.push({ index, operator, code, id: clean(extractScooterId(code), 100), hasQr: sc?.hasQr !== false });
+    const id = clean(sc?.id, 100) || clean(extractScooterId(code), 100);
+    items.push({ index, operator, code, id, hasQr: sc?.hasQr !== false });
   }
 
   const seen = new Set<string>();

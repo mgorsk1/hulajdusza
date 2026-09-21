@@ -161,17 +161,101 @@ async function decodeCanvas(canvas) {
   }
 }
 
+/* OCR dla naklejek Lime (wyciąga numer z tabliczki np. DEE-XKY lub 338-921) */
+let tesseractPromise;
+function loadTesseract() {
+  tesseractPromise ??= new Promise((res, rej) => {
+    if (window.Tesseract) return res(window.Tesseract);
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload = () => res(window.Tesseract);
+    s.onerror = rej;
+    document.head.append(s);
+  });
+  return tesseractPromise;
+}
+
+let ocrWorkerPromise = null;
+async function getOcrWorker() {
+  ocrWorkerPromise ??= (async () => {
+    const T = await loadTesseract();
+    const worker = await T.createWorker("eng", 1, {
+      errorHandler: (err) => console.warn("Tesseract worker error:", err),
+    });
+    await worker.setParameters({
+      tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- ",
+    });
+    return worker;
+  })();
+  return ocrWorkerPromise;
+}
+
+async function tryOcrLimePlate(imageSource) {
+  if (!imageSource) return null;
+  try {
+    const worker = await Promise.race([
+      getOcrWorker(),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 4000)),
+    ]);
+    const { data: { text } } = await Promise.race([
+      worker.recognize(imageSource),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("ocr_timeout")), 5000)),
+    ]);
+    if (!text) return null;
+
+    // Szukamy formatu 3 znaki - 3 znaki (np. DEE-XKY lub 338-921)
+    const fullMatch = text.match(/\b([A-Z0-9]{3})[-–—]([A-Z0-9]{3})\b/i);
+    if (fullMatch) {
+      const cand = `${fullMatch[1]}-${fullMatch[2]}`.toUpperCase();
+      if (!cand.includes("LIME") && !cand.includes("HTTP")) return cand;
+    }
+
+    // Szukamy dwóch słów po 3 znaki (np. "DEE XKY")
+    const words = text.replace(/[^A-Za-z0-9\s-]/g, " ").split(/\s+/).filter(Boolean);
+    for (let i = 0; i < words.length - 1; i++) {
+      const w1 = words[i].toUpperCase(), w2 = words[i + 1].toUpperCase();
+      if (w1.length === 3 && w2.length === 3 && /^[A-Z0-9]{3}$/.test(w1) && /^[A-Z0-9]{3}$/.test(w2)) {
+        if (!["LIM", "BIK", "HTT", "WWW", "APP"].includes(w1) && !["IME", "IKE", "TPS", "COM"].includes(w2)) {
+          return `${w1}-${w2}`;
+        }
+      }
+    }
+
+    // Ciąg 6 znaków (np. DEEXKY)
+    const sixMatch = text.match(/\b([A-Z0-9]{6})\b/i);
+    if (sixMatch) {
+      const c = sixMatch[1].toUpperCase();
+      if (!["LIMEBI", "LIMEAP", "HTTPS", "HTTP"].includes(c)) {
+        return `${c.slice(0, 3)}-${c.slice(3)}`;
+      }
+    }
+  } catch (e) {
+    console.warn("OCR fallback na kod z QR:", e);
+  }
+  return null;
+}
+
 /* ---------- Krok 1: kod QR skanowany na żywo ---------- */
 // Operator, numer i informacja, czy hulajnoga była już dziś zgłoszona (backend)
-async function checkCurrent(code, operator) {
+async function checkCurrent(code, operator, photoSource) {
   const mine = current;
   mine.status = "analyzing";
+  mine.analyzingMsg = "Sprawdzam kod…";
   renderStart();
+
+  let detectedId = null;
+  const isLime = (typeof code === "string" && /li\.me|lime/i.test(code)) || operator === "lime";
+  if (isLime && photoSource) {
+    mine.analyzingMsg = "Odczytuję numer z naklejki…";
+    renderStart();
+    detectedId = await tryOcrLimePlate(photoSource);
+  }
+
   try {
     const r = await fetch("/api/check", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ code, operator }),
+      body: JSON.stringify({ code, operator, id: detectedId || undefined }),
     });
     if (!r.ok) throw new Error(String(r.status));
     const d = await r.json();
@@ -206,7 +290,7 @@ function renderStart() {
   const thumb = current?.qr ? `<img src="${current.qr.url}" alt="" class="w-16 h-16 rounded-md object-cover bg-muted flex-none">` : "";
   let state = "";
   if (busy) {
-    state = `<div class="flex items-center gap-4">${thumb}<p class="text-sm text-muted">Sprawdzam kod…</p></div>`;
+    state = `<div class="flex items-center gap-4">${thumb}<p class="text-sm text-muted">${esc(current?.analyzingMsg || "Sprawdzam kod…")}</p></div>`;
   } else if (fail) {
     const msg = current.status === "needop" ? "Nie rozpoznaliśmy operatora tej hulajnogi." : "Nie udało się sprawdzić kodu.";
     state = `<div class="flex items-start gap-4">${thumb}<div class="min-w-0">
@@ -343,7 +427,7 @@ async function openScanner() {
           // Zdjęcie kodu QR = klatka z podglądu w chwili odczytu
           mine.qr = await makePhoto(v);
           stopScanner();
-          return checkCurrent(code);
+          return checkCurrent(code, null, mine.qr.blob);
         }
       }
       setTimeout(tick, 120);

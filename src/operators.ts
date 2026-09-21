@@ -29,7 +29,7 @@ export const OPERATORS: Operator[] = [
     name: "Bolt",
     color: "#34d186",
     dark: "#34d186",
-    match: "bolt\\.eu|bolt\\.com|\\bbolt\\b",
+    match: "taxify\\.eu|taxify\\.me|taxify\\.com|bolt\\.eu|bolt\\.com|\\btaxify\\b|\\bbolt\\b",
     email: "poland@bolt.eu",
     phone: "+48 22 307 83 67",
     formUrl: "https://bolt.eu/pl-pl/scooters/report/",
