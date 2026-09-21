@@ -393,7 +393,7 @@ async function buildDrafts(input: {
         "Pozdrawiam",
       ].join("\n"),
       // Fragmenty, które interfejs wyróżnia badge'ami
-      highlights: { to: op.email, ids, street, address, when: whenText },
+      highlights: { to: op.email, ids, street, address, when: whenText, operator: op.name },
       photoIndexes: group.map((g) => g.index),
     };
   });

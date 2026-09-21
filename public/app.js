@@ -1001,14 +1001,15 @@ function renderMails(data) {
   for (const m of data.messages) {
     const photos = scooters.filter((s) => s.operator === m.operator).flatMap((s) => s.photos);
     const h = m.highlights;
+    const opBadge = h.operator || m.name || "";
     const el = document.createElement("div");
     el.className = "mail";
     el.innerHTML = `
       <div class="mail-row"><span>Od</span><span>${esc(m.from)}</span></div>
       <div class="mail-row"><span>Do</span><span><span class="badge">${esc(m.to)}</span></span></div>
       ${m.cc ? `<div class="mail-row"><span>DW</span><span><span class="badge">${esc(m.cc)}</span></span></div>` : ""}
-      <div class="mail-row"><span>Temat</span><span>${highlight(m.subject, [...h.ids, h.street])}</span></div>
-      <div class="mail-body">${highlight(m.body, [...h.ids, h.address, h.when])}</div>
+      <div class="mail-row"><span>Temat</span><span>${highlight(m.subject, [...h.ids, h.street, opBadge])}</span></div>
+      <div class="mail-body">${highlight(m.body, [...h.ids, h.address, h.when, opBadge])}</div>
       <div class="mail-att"><span>Załączniki:</span>${photos.map((p) => `<img src="${p.url}" alt="">`).join("")}<span>${photosWord(photos.length)}</span></div>`;
     $("mails").append(el);
   }
