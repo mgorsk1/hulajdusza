@@ -79,7 +79,7 @@ async function resolveStreet(l) {
   try {
     const r = await fetch(`/api/geocode?lat=${l.lat}&lng=${l.lng}`);
     const d = await r.json();
-    l.street = r.ok ? d.street || "" : r.status === 422 ? "poza Warszawą" : "";
+    l.street = r.ok ? d.street || "" : r.status === 422 ? "poza obsługiwanym obszarem" : "";
     console.log("[Loc] Adres ustalony:", l.street || "(brak nazwy)");
   } catch (err) {
     console.warn("[Loc] Błąd geokodowania:", err);
@@ -1046,7 +1046,7 @@ async function openConfirm() {
     renderMails(d);
   } catch (e) {
     $("mails").innerHTML = "";
-    showErr3(e.message === "outside_warsaw" ? "Zgłoszenia przyjmujemy tylko z Warszawy." : "Nie udało się przygotować wiadomości. Wróć i spróbuj ponownie.");
+    showErr3(e.message === "outside_area" ? "Zgłoszenia przyjmujemy tylko z Polski." : "Nie udało się przygotować wiadomości. Wróć i spróbuj ponownie.");
   }
   if (!tsWidget && window.turnstile) {
     tsWidget = turnstile.render("#ts", {
@@ -1097,7 +1097,7 @@ $("send").onclick = async () => {
   } catch (e) {
     const msgs = {
       turnstile_failed: "Weryfikacja anty-spam nie powiodła się. Potwierdź ją ponownie.",
-      outside_warsaw: "Zgłoszenia przyjmujemy tylko z Warszawy.",
+      outside_area: "Zgłoszenia przyjmujemy tylko z Polski.",
       too_large: "Zdjęcia są za duże.",
       need_photos: "Do każdej hulajnogi potrzebne jest zdjęcie kodu QR i zdjęcie miejsca, w którym stoi (przy ręcznie wpisanym numerze wystarczy to drugie).",
       bad_cc: "Adres e-mail w UDW jest niepoprawny. Wróć i popraw go.",

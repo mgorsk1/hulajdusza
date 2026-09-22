@@ -12,7 +12,7 @@ export interface Operator {
   formUrl?: string;
 }
 
-// Operatorzy hulajnóg elektrycznych w Warszawie (umowy z ZDM: Bolt, Dott, Lime).
+// Operatorzy hulajnóg elektrycznych działający w polskich miastach (Bolt, Dott, Lime).
 // Hulajnogi Lime dostępne w aplikacji Uber to nadal hulajnogi Lime – ich kod QR jest kodem Lime.
 export const OPERATORS: Operator[] = [
   {

@@ -1,6 +1,6 @@
 # Hulajdusza
 
-Zgłaszanie źle zaparkowanych hulajnóg w Warszawie (Bolt, Lime, Dott). Cloudflare Workers (static assets + API), D1, Turnstile.
+Zgłaszanie źle zaparkowanych hulajnóg w polskich miastach (Bolt, Lime, Dott). Cloudflare Workers (static assets + API), D1, Turnstile.
 
 ## Start
 ```bash

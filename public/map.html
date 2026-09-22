@@ -6,6 +6,31 @@
   <meta name="color-scheme" content="light dark">
   <script src="/theme.js"></script>
   <title>Mapa zgłoszeń – Hulajdusza</title>
+
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0a0a0c">
+
+  <!-- Open Graph / Twitter Card -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Hulajdusza">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:title" content="Mapa zgłoszeń – Hulajdusza">
+  <meta property="og:description" content="Mapa źle zaparkowanych hulajnóg zgłoszonych w Twoim mieście, na żywo.">
+  <meta property="og:url" content="https://hulajdusza.mariuszgorski.pl/map">
+  <meta property="og:image" content="https://hulajdusza.mariuszgorski.pl/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Hulajdusza – 😈 diabelnie skuteczne zgłoszenia hulajnóg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Mapa zgłoszeń – Hulajdusza">
+  <meta name="twitter:description" content="Mapa źle zaparkowanych hulajnóg zgłoszonych w Twoim mieście, na żywo.">
+  <meta name="twitter:image" content="https://hulajdusza.mariuszgorski.pl/og-image.png">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -54,18 +79,18 @@
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
-    // Centrowanie na lokalizacji użytkownika (tylko gdy jest w Warszawie – poza nią zostaje widok miasta)
+    // Centrowanie na lokalizacji użytkownika (tylko gdy jest w Polsce – poza nią zostaje domyślny widok)
     const geolocate = new maplibregl.GeolocateControl({
       positionOptions: { enableHighAccuracy: true },
       fitBoundsOptions: { maxZoom: 15 },
       showAccuracyCircle: false,
     });
     map.addControl(geolocate, "top-right");
-    const inWarsaw = (lat, lng) => lat > 52.0 && lat < 52.4 && lng > 20.75 && lng < 21.35;
+    const inPoland = (lat, lng) => lat > 48.9 && lat < 55.0 && lng > 14.0 && lng < 24.2;
     function centerOnMe() {
       navigator.geolocation?.getCurrentPosition(
         ({ coords }) => {
-          if (!inWarsaw(coords.latitude, coords.longitude)) return;
+          if (!inPoland(coords.latitude, coords.longitude)) return;
           map.jumpTo({ center: [coords.longitude, coords.latitude], zoom: 14 });
           geolocate.trigger(); // pokazuje niebieską kropkę „jesteś tutaj”
         },

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hulajdusza — Identyfikacja wizualna</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0c; --panel:#111114; --line:rgba(255,255,255,0.09); --line-soft:rgba(255,255,255,0.05);
+    --ink:#f5f5f6; --ink-dim:rgba(245,245,246,0.58); --ink-faint:rgba(245,245,246,0.34);
+    --lime:#bef000; --green:#34d186; --blue:#00a3e2;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 40px;}
+
+  /* ---------- Cover ---------- */
+  .cover{
+    position:relative; min-height:100vh; display:flex; flex-direction:column; justify-content:center;
+    background:
+      radial-gradient(680px 460px at 88% -10%, rgba(190,240,0,0.10), transparent 60%),
+      radial-gradient(720px 520px at -10% 110%, rgba(52,209,134,0.09), transparent 60%),
+      var(--bg);
+    overflow:hidden; border-bottom:1px solid var(--line);
+  }
+  .cover-grid{
+    position:absolute; inset:0;
+    background-image:linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size:64px 64px;
+    mask-image:radial-gradient(760px 520px at 50% 45%, black 25%, transparent 75%);
+  }
+  .cover-frame{ position:absolute; inset:28px; border:1px solid var(--line); border-radius:22px; }
+  .kicker{ display:flex; align-items:center; gap:10px; font-size:13px; letter-spacing:.14em; color:var(--ink-faint); text-transform:uppercase; z-index:2; }
+  .kicker .dot{width:6px;height:6px;border-radius:999px;background:var(--green);}
+  .cover-mark{ display:flex; align-items:center; gap:28px; margin-top:28px; z-index:2; }
+  .cover-emoji{ font-size:104px; line-height:1; filter:drop-shadow(0 16px 34px rgba(190,240,0,0.16)); }
+  .cover-word{ font-weight:800; font-size:76px; letter-spacing:-0.03em; line-height:1; }
+  .cover-tag{ margin-top:22px; font-size:22px; color:var(--ink-dim); z-index:2; max-width:560px; line-height:1.5; }
+  .cover-tag b{ color:var(--ink); font-weight:700; }
+  .cover-meta{ position:absolute; bottom:46px; left:40px; right:40px; display:flex; justify-content:space-between; font-size:13px; color:var(--ink-faint); z-index:2; }
+
+  /* ---------- Sections ---------- */
+  section{ padding:96px 0; border-bottom:1px solid var(--line); }
+  section:last-of-type{ border-bottom:none; }
+  .section-head{ display:flex; align-items:baseline; gap:16px; margin-bottom:44px; }
+  .section-num{ font-size:13px; color:var(--ink-faint); letter-spacing:.1em; }
+  .section-title{ font-size:32px; font-weight:800; letter-spacing:-0.02em; }
+  .section-sub{ margin-top:10px; margin-bottom:44px; max-width:640px; font-size:16px; line-height:1.7; color:var(--ink-dim); }
+  .label{ font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:10px; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+  .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+  .card{ border:1px solid var(--line); border-radius:16px; background:var(--panel); padding:28px; }
+  .card.flush{ padding:0; overflow:hidden; }
+
+  /* ---------- Logo section ---------- */
+  .logo-stage{
+    display:flex; align-items:center; justify-content:center; gap:22px;
+    min-height:220px; border-radius:16px; border:1px solid var(--line);
+    background:
+      radial-gradient(360px 260px at 80% 0%, rgba(190,240,0,0.10), transparent 60%),
+      radial-gradient(360px 260px at 0% 100%, rgba(52,209,134,0.09), transparent 60%),
+      var(--panel);
+  }
+  .logo-stage .e{ font-size:64px; }
+  .logo-stage .w{ font-weight:800; font-size:40px; letter-spacing:-0.02em; }
+  .logo-stage.icon-only .e{ font-size:80px; }
+  .clearspace{ position:relative; padding:36px; }
+  .clearspace .unit{ position:absolute; font-size:11px; color:var(--ink-faint); }
+  .dont-row{ display:flex; align-items:center; justify-content:center; gap:14px; min-height:120px; }
+  .dont-row .e{ font-size:44px; }
+  .dont-row .w{ font-weight:800; font-size:26px; letter-spacing:-0.02em; }
+  .no-badge{ position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:999px; background:rgba(220,38,38,.15); border:1px solid rgba(248,113,113,.5); display:flex; align-items:center; justify-content:center; font-size:13px; color:#f87171; }
+  .dont-card{ position:relative; }
+  .dont-caption{ margin-top:14px; font-size:13px; color:var(--ink-faint); }
+
+  /* ---------- Color ---------- */
+  .swatch{ border-radius:14px; overflow:hidden; border:1px solid var(--line); }
+  .swatch-fill{ height:104px; }
+  .swatch-meta{ padding:14px 16px; background:var(--panel); }
+  .swatch-name{ font-size:14px; font-weight:600; }
+  .swatch-hex{ font-size:12px; color:var(--ink-faint); margin-top:2px; }
+  .swatch-use{ font-size:12px; color:var(--ink-dim); margin-top:8px; line-height:1.5; }
+
+  .token-row{ display:flex; align-items:center; gap:14px; padding:12px 0; border-top:1px solid var(--line-soft); }
+  .token-row:first-child{ border-top:none; }
+  .token-chip{ width:34px; height:34px; border-radius:9px; flex:none; border:1px solid var(--line); }
+  .token-name{ font-size:13px; flex:1; }
+  .token-val{ font-size:12px; color:var(--ink-faint); }
+
+  /* ---------- Typography ---------- */
+  .type-row{ display:flex; align-items:baseline; justify-content:space-between; padding:20px 0; border-top:1px solid var(--line-soft); gap:24px; }
+  .type-row:first-child{ border-top:none; }
+  .type-sample{ font-weight:800; }
+  .type-meta{ font-size:12px; color:var(--ink-faint); white-space:nowrap; }
+  .weight-strip{ display:flex; gap:22px; flex-wrap:wrap; margin-top:26px; }
+  .weight-chip{ font-size:15px; color:var(--ink-dim); }
+  .weight-chip b{ color:var(--ink); font-weight:inherit; }
+
+  /* ---------- Icons ---------- */
+  .icon-tile{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:26px 14px; }
+  .icon-tile img{ border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,.35); }
+  .icon-tile .name{ font-size:12px; color:var(--ink-dim); }
+  .icon-tile .dim{ font-size:11px; color:var(--ink-faint); }
+
+  /* ---------- Social ---------- */
+  .og-frame{ border-radius:14px; overflow:hidden; border:1px solid var(--line); }
+  .og-frame img{ width:100%; display:block; }
+  .spec-list{ margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+  .spec-row{ display:flex; justify-content:space-between; font-size:13px; padding:10px 0; border-top:1px solid var(--line-soft); }
+  .spec-row:first-child{ border-top:none; }
+  .spec-row span:first-child{ color:var(--ink-faint); }
+
+  /* ---------- Voice ---------- */
+  .voice-quote{ font-size:26px; font-weight:700; letter-spacing:-0.01em; line-height:1.4; }
+  .voice-quote b{ color:var(--lime); }
+  .chip-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:24px; }
+  .chip{ border:1px solid var(--line); border-radius:999px; padding:8px 16px; font-size:13px; color:var(--ink-dim); }
+
+  /* ---------- Usage rules ---------- */
+  .rule-col .label{ margin-bottom:16px; }
+  .rule{ display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--line-soft); font-size:14px; line-height:1.55; color:var(--ink-dim); }
+  .rule:first-child{ border-top:none; }
+  .rule .mark{ flex:none; width:20px; text-align:center; }
+  .rule.ok .mark{ color:var(--green); }
+  .rule.no .mark{ color:#f87171; }
+
+  /* ---------- Manifest ---------- */
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; font-weight:600; color:var(--ink-faint); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:0 0 12px; }
+  td{ padding:12px 0; border-top:1px solid var(--line-soft); color:var(--ink-dim); }
+  td.path{ color:var(--ink); }
+
+  footer{ padding:56px 0; text-align:center; color:var(--ink-faint); font-size:12px; }
+
+  @media (max-width:860px){
+    .wrap{padding:0 20px;}
+    .grid2,.grid3,.grid4{grid-template-columns:1fr;}
+    .cover-word{font-size:52px;} .cover-emoji{font-size:72px;}
+    section{padding:64px 0;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ============ COVER ============ -->
+  <div class="cover">
+    <div class="cover-grid"></div>
+    <div class="cover-frame"></div>
+    <div class="wrap" style="position:relative;">
+      <div class="kicker"><span class="dot"></span>DOKUMENT IDENTYFIKACJI WIZUALNEJ · v1.0 · wrzesień 2026</div>
+      <div class="cover-mark">
+        <div class="cover-emoji">😈</div>
+        <div class="cover-word">HULAJDUSZA</div>
+      </div>
+      <div class="cover-tag"><b>Diabelnie skuteczne</b> zgłoszenia źle zaparkowanych hulajnóg — dla mieszkańców wielu polskich miast.</div>
+      <div class="cover-meta">
+        <span>hulajdusza.mariuszgorski.pl</span>
+        <span>resources/brandkit/</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- ============ 01 STRATEGY ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">01</span><span class="section-title">Strategia marki</span></div>
+      <div class="grid3">
+        <div class="card">
+          <div class="label">Kategoria</div>
+          <p style="font-size:15px;line-height:1.6;color:var(--ink-dim);">Narzędzie obywatelskie / miejskie — zgłaszanie źle zaparkowanych hulajnóg wspólnego użytku bezpośrednio do operatorów (Bolt, Lime, Dott i inni).</p>
+        </div>
+        <div class="card">
+          <div class="label">Odbiorca</div>
+          <p style="font-size:15px;line-height:1.6;color:var(--ink-dim);">Mieszkańcy miast zirytowani chodnikiem zablokowanym przez hulajnogę — chcą to zgłosić w kilkanaście sekund, bez zakładania konta.</p>
+        </div>
+        <div class="card">
+          <div class="label">Obietnica</div>
+          <p style="font-size:15px;line-height:1.6;color:var(--ink-dim);">Zero tarcia: zdjęcie, kod QR, wysłane. Ton lekko przewrotny — nazwa i maskotka diabełka przełamują urzędowość tematu porządku miejskiego.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 LOGO ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">02</span><span class="section-title">Logo</span></div>
+      <p class="section-sub">Znak marki to lockup emoji 😈 + wordmark <b style="color:var(--ink)">Hulajdusza</b> (Inter, 800, tracking‑tight). Emoji jest natywne systemowo — nie zamieniamy go na rysowaną ikonę poza kontekstem faviconu/OG, gdzie potrzebna jest spójna renderowana wersja.</p>
+
+      <div class="grid3">
+        <div>
+          <div class="label">Lockup poziomy</div>
+          <div class="logo-stage"><span class="e">😈</span><span class="w">Hulajdusza</span></div>
+        </div>
+        <div>
+          <div class="label">Sam znak</div>
+          <div class="logo-stage icon-only"><span class="e">😈</span></div>
+        </div>
+        <div>
+          <div class="label">Sam wordmark</div>
+          <div class="logo-stage"><span class="w">Hulajdusza</span></div>
+        </div>
+      </div>
+
+      <div style="margin-top:44px;" class="grid2">
+        <div>
+          <div class="label">Pole ochronne i minimalny rozmiar</div>
+          <div class="card">
+            <p style="font-size:14px;line-height:1.7;color:var(--ink-dim);">Wokół lockupu zachowaj margines równy wysokości emoji (1×). W nawigacji aplikacji znak renderowany jest przy <span class="mono">16px</span> tekstu — poniżej <span class="mono">24px</span> całkowitej wysokości używaj samego znaku, bez wordmarku.</p>
+            <div class="chip-row">
+              <span class="chip mono">min. app: 24px</span>
+              <span class="chip mono">favicon: 16–512px</span>
+              <span class="chip mono">OG lockup: 148px</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Czego unikać</div>
+          <div class="card dont-card">
+            <div class="dont-row">
+              <span class="e" style="filter:hue-rotate(180deg);">😈</span>
+              <span class="w">Hulajdusza</span>
+            </div>
+            <div class="no-badge">✕</div>
+            <div class="dont-caption">Nie przebarwiaj, nie odbijaj lustrzanie, nie zamieniaj emoji na inną ikonę i nie rozciągaj wordmarku.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 COLOR ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">03</span><span class="section-title">Kolor</span></div>
+      <p class="section-sub">Dwa równoległe systemy: neutralny motyw produktu (jasny/ciemny, sterowany tokenami) do UI aplikacji oraz ciemna paleta z akcentem neonowym do materiałów marketingowych (OG image, ikony, prezentacje).</p>
+
+      <div class="label">Paleta marketingowa</div>
+      <div class="grid3" style="margin-bottom:48px;">
+        <div class="swatch">
+          <div class="swatch-fill" style="background:#0a0a0c;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Canvas</div>
+            <div class="swatch-hex mono">#0a0a0c</div>
+            <div class="swatch-use">Tło OG-image'u, ikon i pokazów brandowych.</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background:#bef000;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Lime</div>
+            <div class="swatch-hex mono">#bef000</div>
+            <div class="swatch-use">Główny akcent — poświata znaku, pierwsza kropka statusu.</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background:#34d186;"></div>
+          <div class="swatch-meta">
+            <div class="swatch-name">Green</div>
+            <div class="swatch-hex mono">#34d186</div>
+            <div class="swatch-use">Drugi akcent — pin lokalizacji, potwierdzenia.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div>
+          <div class="label">Tokeny UI — jasny</div>
+          <div class="card">
+            <div class="token-row"><span class="token-chip" style="background:hsl(0 0% 100%);"></span><span class="token-name">background</span><span class="token-val mono">0 0% 100%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 10% 3.9%);"></span><span class="token-name">foreground</span><span class="token-val mono">240 10% 3.9%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 5.9% 10%);"></span><span class="token-name">primary</span><span class="token-val mono">240 5.9% 10%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 4.8% 95.9%);"></span><span class="token-name">muted</span><span class="token-val mono">240 4.8% 95.9%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 5.9% 90%);"></span><span class="token-name">border</span><span class="token-val mono">240 5.9% 90%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(0 72% 45%);"></span><span class="token-name">danger</span><span class="token-val mono">0 72% 45%</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="label">Tokeny UI — ciemny</div>
+          <div class="card">
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 10% 3.9%);"></span><span class="token-name">background</span><span class="token-val mono">240 10% 3.9%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(0 0% 98%);"></span><span class="token-name">foreground</span><span class="token-val mono">0 0% 98%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(0 0% 98%);"></span><span class="token-name">primary</span><span class="token-val mono">0 0% 98%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 3.7% 15.9%);"></span><span class="token-name">muted</span><span class="token-val mono">240 3.7% 15.9%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(240 3.7% 15.9%);"></span><span class="token-name">border</span><span class="token-val mono">240 3.7% 15.9%</span></div>
+            <div class="token-row"><span class="token-chip" style="background:hsl(0 84% 65%);"></span><span class="token-name">danger</span><span class="token-val mono">0 84% 65%</span></div>
+          </div>
+        </div>
+      </div>
+      <p style="margin-top:20px;font-size:13px;color:var(--ink-faint);line-height:1.6;">Produkt sam w sobie jest celowo monochromatyczny (czerń/biel) — akcenty lime/green/blue oraz zielony „live dot” (<span class="mono">#22c55e</span>) i laser skanowania QR to sygnały stanu, nie część palety brandowej, i nie powinny rozlewać się poza swoje komponenty.</p>
+    </section>
+
+    <!-- ============ 04 TYPOGRAPHY ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">04</span><span class="section-title">Typografia</span></div>
+      <p class="section-sub">Jeden krój na cały system: <b style="color:var(--ink)">Inter</b>. Nagłówki ciężkie i ścieśnione (tracking‑tight), treść regularna, dane liczbowe/kod w JetBrains Mono.</p>
+      <div class="card">
+        <div class="type-row"><span class="type-sample" style="font-size:44px;letter-spacing:-0.03em;">Hulajdusza</span><span class="type-meta mono">800 · -3% tracking · nagłówki hero</span></div>
+        <div class="type-row"><span class="type-sample" style="font-size:28px;font-weight:700;letter-spacing:-0.02em;">Źle zaparkowana?</span><span class="type-meta mono">700 · -2% tracking · nagłówki sekcji</span></div>
+        <div class="type-row"><span class="type-sample" style="font-size:17px;font-weight:500;">Zeskanuj kod QR</span><span class="type-meta mono">500 · przyciski, etykiety</span></div>
+        <div class="type-row"><span class="type-sample" style="font-size:15px;font-weight:400;color:var(--ink-dim);">Hulajnoga blokuje chodnik, przejście albo przejazd.</span><span class="type-meta mono">400 · treść</span></div>
+      </div>
+      <div class="weight-strip">
+        <span class="weight-chip"><b style="font-weight:400;">Aa</b> 400 Regular</span>
+        <span class="weight-chip"><b style="font-weight:500;">Aa</b> 500 Medium</span>
+        <span class="weight-chip"><b style="font-weight:600;">Aa</b> 600 SemiBold</span>
+        <span class="weight-chip"><b style="font-weight:700;">Aa</b> 700 Bold</span>
+        <span class="weight-chip"><b style="font-weight:800;">Aa</b> 800 ExtraBold</span>
+      </div>
+    </section>
+
+    <!-- ============ 05 ICONS ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">05</span><span class="section-title">Ikony i favicony</span></div>
+      <p class="section-sub">Jeden master (512×512) skalowany w dół do każdego kontekstu. Pliki źródłowe w <span class="mono chip" style="padding:2px 8px;">resources/brandkit/</span>, wyeksportowane do <span class="mono chip" style="padding:2px 8px;">public/</span>.</p>
+      <div class="card flush">
+        <div class="grid4" style="gap:0;">
+          <div class="icon-tile" style="border-right:1px solid var(--line-soft);">
+            <img src="icon-512.png" width="64" height="64" alt="favicon 32">
+            <div class="name">favicon-32×32.png</div>
+            <div class="dim mono">32 × 32</div>
+          </div>
+          <div class="icon-tile" style="border-right:1px solid var(--line-soft);">
+            <img src="icon-512.png" width="80" height="80" alt="apple touch icon">
+            <div class="name">apple-touch-icon.png</div>
+            <div class="dim mono">180 × 180</div>
+          </div>
+          <div class="icon-tile" style="border-right:1px solid var(--line-soft);">
+            <img src="icon-512.png" width="90" height="90" alt="android chrome 192">
+            <div class="name">android-chrome-192.png</div>
+            <div class="dim mono">192 × 192</div>
+          </div>
+          <div class="icon-tile">
+            <img src="icon-512.png" width="104" height="104" alt="android chrome 512">
+            <div class="name">android-chrome-512.png</div>
+            <div class="dim mono">512 × 512</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 SOCIAL ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">06</span><span class="section-title">Podgląd społecznościowy</span></div>
+      <div class="grid2">
+        <div class="og-frame">
+          <img src="../../public/og-image.png" alt="OG image Hulajdusza">
+        </div>
+        <div>
+          <div class="label">Specyfikacja</div>
+          <div class="spec-list">
+            <div class="spec-row"><span>Rozmiar</span><span class="mono">1200 × 630</span></div>
+            <div class="spec-row"><span>Plik</span><span class="mono">public/og-image.png</span></div>
+            <div class="spec-row"><span>Źródło</span><span class="mono">resources/brandkit/og-image.html</span></div>
+            <div class="spec-row"><span>Użycie</span><span>og:image + twitter:image, wspólny dla wszystkich podstron</span></div>
+            <div class="spec-row"><span>Miasto</span><span>bez konkretnej nazwy miasta — produkt obejmuje kilka miast</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 07 VOICE ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">07</span><span class="section-title">Głos marki</span></div>
+      <div class="grid2">
+        <div class="card">
+          <div class="voice-quote"><b>Diabelnie skuteczne</b> zgłoszenia hulajnóg.</div>
+          <p style="margin-top:16px;font-size:14px;color:var(--ink-dim);line-height:1.6;">Bezpośredni, lekko przewrotny, zero korporacyjnego żargonu. Zdania krótkie, czasowniki w trybie rozkazującym przy wezwaniach do działania.</p>
+        </div>
+        <div class="card">
+          <div class="label">Przykłady z interfejsu</div>
+          <div class="chip-row">
+            <span class="chip">Zgłoś</span>
+            <span class="chip">Zeskanuj kod QR</span>
+            <span class="chip">Źle zaparkowana?</span>
+            <span class="chip">Wpisz numer ręcznie</span>
+            <span class="chip">Mapa</span>
+            <span class="chip">Statystyki</span>
+          </div>
+          <p style="margin-top:18px;font-size:13px;color:var(--ink-faint);line-height:1.6;">Unikamy nazw miast w komunikacji ogólnej (nagłówki, OG) — produkt działa w wielu miastach; nazwę miasta pokazujemy tylko tam, gdzie dane są faktycznie przefiltrowane (np. statystyki po wyborze miasta).</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 08 USAGE ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">08</span><span class="section-title">Zasady użycia</span></div>
+      <div class="grid2">
+        <div class="rule-col">
+          <div class="label">Rób</div>
+          <div class="card">
+            <div class="rule ok"><span class="mark">✓</span>Zachowuj ciemne, neonowe tło (#0a0a0c) dla wszystkich materiałów marketingowych i OG.</div>
+            <div class="rule ok"><span class="mark">✓</span>Trzymaj UI produktu monochromatyczne — akcent tylko w statusach i marketingu.</div>
+            <div class="rule ok"><span class="mark">✓</span>Używaj Inter we wszystkich kontekstach, tracking‑tight w nagłówkach.</div>
+            <div class="rule ok"><span class="mark">✓</span>Formułuj copy neutralnie względem miasta, chyba że dane są filtrowane.</div>
+          </div>
+        </div>
+        <div class="rule-col">
+          <div class="label">Nie rób</div>
+          <div class="card">
+            <div class="rule no"><span class="mark">✕</span>Nie zastępuj emoji 😈 rysowaną ikoną poza kontekstem systemowego renderowania (favicon/OG).</div>
+            <div class="rule no"><span class="mark">✕</span>Nie wprowadzaj dodatkowych kolorów akcentu poza lime/green/blue.</div>
+            <div class="rule no"><span class="mark">✕</span>Nie zaszywaj nazwy jednego miasta w globalnych nagłówkach i opisach OG.</div>
+            <div class="rule no"><span class="mark">✕</span>Nie mieszaj palety marketingowej z neutralnym motywem produktu w tym samym widoku.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 09 MANIFEST ============ -->
+    <section>
+      <div class="section-head"><span class="section-num mono">09</span><span class="section-title">Manifest plików</span></div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Plik</th><th>Rola</th></tr></thead>
+          <tbody>
+            <tr><td class="path mono">resources/brandkit/og-image.html</td><td>Źródło renderowanego OG image (1200×630)</td></tr>
+            <tr><td class="path mono">resources/brandkit/icon.html</td><td>Źródło mastera ikony (512×512)</td></tr>
+            <tr><td class="path mono">resources/brandkit/icon-512.png</td><td>Wyrenderowany master ikony</td></tr>
+            <tr><td class="path mono">public/og-image.png</td><td>OG/Twitter image — wspólny dla wszystkich podstron</td></tr>
+            <tr><td class="path mono">public/favicon.svg</td><td>Favicon wektorowy (nowoczesne przeglądarki)</td></tr>
+            <tr><td class="path mono">public/favicon.ico</td><td>Favicon wielorozdzielczy (16/32/48/64)</td></tr>
+            <tr><td class="path mono">public/favicon-16x16.png · favicon-32x32.png</td><td>Favicon PNG fallback</td></tr>
+            <tr><td class="path mono">public/apple-touch-icon.png</td><td>Ikona iOS (180×180)</td></tr>
+            <tr><td class="path mono">public/android-chrome-192x192.png · 512x512.png</td><td>Ikony Android / PWA</td></tr>
+            <tr><td class="path mono">public/site.webmanifest</td><td>Manifest PWA (nazwa, kolory, ikony)</td></tr>
+            <tr><td class="path mono">public/style.css</td><td>Tokeny koloru i komponenty UI produktu</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <footer>Hulajdusza — dokument identyfikacji wizualnej · v1.0 · wrzesień 2026</footer>
+
+</body>
+</html>

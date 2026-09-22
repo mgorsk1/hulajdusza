@@ -37,12 +37,13 @@ const MAX_PHOTOS = 3; // kod QR + do dwóch zdjęć dokumentujących
 // Limit wiadomości w Email Service to 5 MiB, a base64 puchnie o ~33%: na jednego operatora max 3 MB zdjęć
 const MAX_GROUP_BYTES = 3 * 1024 * 1024;
 const EMAIL_RE = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]{2,}$/;
-// Warszawa (z zapasem) – zgłoszenia spoza są odrzucane
-const WARSAW = { minLat: 52.0, maxLat: 52.4, minLng: 20.75, maxLng: 21.35 };
+// Polska (z zapasem na granice) – zgłoszenia spoza są odrzucane. Operatorzy działają w wielu miastach
+// (Warszawa, Kraków, Wrocław, Poznań, Gdańsk, Łódź i inne), więc bramka jest na cały kraj, nie na jedno miasto.
+const POLAND = { minLat: 48.9, maxLat: 55.0, minLng: 14.0, maxLng: 24.2 };
 
-const inWarsaw = (lat: number, lng: number) =>
+const inPoland = (lat: number, lng: number) =>
   Number.isFinite(lat) && Number.isFinite(lng) &&
-  lat >= WARSAW.minLat && lat <= WARSAW.maxLat && lng >= WARSAW.minLng && lng <= WARSAW.maxLng;
+  lat >= POLAND.minLat && lat <= POLAND.maxLat && lng >= POLAND.minLng && lng <= POLAND.maxLng;
 
 const json = (data: unknown, status = 200, headers: HeadersInit = {}) =>
   new Response(JSON.stringify(data), {
@@ -165,12 +166,12 @@ async function geocode(url: URL): Promise<Response> {
   // Zaokrąglenie zwiększa trafność cache i nie zdradza dokładnej pozycji dalej niż to konieczne
   const lat = Number(Number(url.searchParams.get("lat")).toFixed(4));
   const lng = Number(Number(url.searchParams.get("lng")).toFixed(4));
-  if (!inWarsaw(lat, lng)) return json({ error: "outside_warsaw" }, 422);
+  if (!inPoland(lat, lng)) return json({ error: "outside_area" }, 422);
   return json(await reverseGeocode(lat, lng), 200, { "cache-control": "public, max-age=3600" });
 }
 
 /**
- * Samo wykrycie miasta z lokalizacji, BEZ ograniczenia do Warszawy (w odróżnieniu od /api/geocode, które służy
+ * Samo wykrycie miasta z lokalizacji, BEZ ograniczenia do Polski (w odróżnieniu od /api/geocode, które służy
  * zgłoszeniom). Używane przez stronę statystyk, żeby domyślnie ustawić filtr miasta na to, gdzie jest przeglądający.
  */
 async function cityLookup(url: URL): Promise<Response> {
@@ -285,8 +286,7 @@ interface Geo {
   city: string;
 }
 
-// Dopóki aplikacja przyjmuje zgłoszenia tylko z Warszawy (inWarsaw), to bezpieczny fallback,
-// gdy Nominatim nie zwróci nazwy miasta. Gotowe pod przyszłe rozszerzenie na inne miasta.
+// Bezpieczny fallback, gdy Nominatim nie zwróci nazwy miasta (aplikacja przyjmuje zgłoszenia z całej Polski, patrz inPoland).
 const DEFAULT_CITY = "Warszawa";
 
 async function reverseGeocode(lat: number, lng: number): Promise<Geo> {
@@ -357,7 +357,7 @@ async function buildDrafts(input: {
 }) {
   const lat = Number(input.lat);
   const lng = Number(input.lng);
-  if (!inWarsaw(lat, lng)) return { ok: false as const, error: "outside_warsaw", status: 422 as const };
+  if (!inPoland(lat, lng)) return { ok: false as const, error: "outside_area", status: 422 as const };
   const scooters = input.scooters;
   if (!Array.isArray(scooters) || scooters.length < 1 || scooters.length > MAX_SCOOTERS) {
     return { ok: false as const, error: "bad_scooters", status: 400 as const };
@@ -389,7 +389,7 @@ async function buildDrafts(input: {
 
   const geo = await reverseGeocode(lat, lng);
   const street = geo.street || "adres nieustalony";
-  const address = `${street}, Warszawa`;
+  const address = `${street}, ${geo.city}`;
   const whenText = when.toLocaleString("pl-PL", { timeZone: "Europe/Warsaw", dateStyle: "short", timeStyle: "short" });
 
   const groups = new Map<string, typeof items>();
