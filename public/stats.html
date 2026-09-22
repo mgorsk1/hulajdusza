@@ -132,25 +132,25 @@
         <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
           <p class="text-sm md:text-xs text-muted">Liczba zgłoszeń</p>
           <p id="city-total" class="text-2xl font-bold tracking-tight leading-tight mt-3">–</p>
-          <p id="city-total-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+          <p id="city-total-sub" class="text-sm md:text-xs text-muted mt-1.5 whitespace-nowrap"></p>
         </article>
 
         <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
           <p class="text-sm md:text-xs text-muted">Lider operatorów</p>
           <p class="flex items-center gap-2 text-2xl font-bold tracking-tight leading-tight mt-3"><span id="city-lead-dot" class="dot"></span><span id="city-lead-name">–</span></p>
-          <p id="city-lead-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+          <p id="city-lead-sub" class="text-sm md:text-xs text-muted mt-1.5 whitespace-nowrap"></p>
         </article>
 
         <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
           <p class="text-sm md:text-xs text-muted">Najgorsza dzielnica</p>
           <p id="dist-name" class="text-2xl font-bold tracking-tight leading-tight mt-3">–</p>
-          <p id="dist-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+          <p id="dist-sub" class="text-sm md:text-xs text-muted mt-1.5 whitespace-nowrap"></p>
         </article>
       </div>
 
       <article class="p-6 rounded-lg border border-default bg-card">
         <h2 class="font-semibold">Hulajnogi wg dzielnicy</h2>
-        <p class="text-sm text-muted mb-6">Liczba zgłoszonych hulajnóg w wybranym mieście</p>
+        <p id="district-chart-sub" class="text-sm text-muted mb-6">Liczba zgłoszonych hulajnóg w mieście –</p>
         <div id="c-district-bars"></div>
       </article>
     </section>
@@ -265,7 +265,7 @@
       const total = data.operatorsInCity.reduce((s, r) => s + r.scooters, 0);
       $("city-lead-name").textContent = op.name;
       $("city-lead-dot").style.background = isDark() ? op.dark : op.color;
-      pctLine("city-lead-sub", lead.scooters, total, "w tym mieście");
+      pctLine("city-lead-sub", lead.scooters, total, `w mieście ${data.selectedCity}`);
     }
 
     /* ---------- Najgorsza dzielnica (w obrębie wybranego miasta) ---------- */
@@ -275,7 +275,7 @@
       if (!top) return void (($("dist-name").textContent = "–"), ($("dist-sub").textContent = ""));
       const total = data.districtsInCity.reduce((s, r) => s + r.scooters, 0);
       $("dist-name").textContent = top.district;
-      pctLine("dist-sub", top.scooters, total, "w tym mieście");
+      pctLine("dist-sub", top.scooters, total, `w mieście ${data.selectedCity}`);
     }
 
     /* ---------- Donut (udział %) ---------- */
@@ -339,6 +339,7 @@
 
     function districtBars() {
       const el = $("c-district-bars");
+      $("district-chart-sub").textContent = `Liczba zgłoszonych hulajnóg w mieście ${data.selectedCity}`;
       const rows = [...data.districtsInCity].filter((r) => r.district !== "Nieustalona").sort((a, b) => b.scooters - a.scooters).slice(0, 8);
       if (!rows.length) return void (el.innerHTML = empty(`Brak danych dla miasta „${esc(data.selectedCity)}”.`));
 
