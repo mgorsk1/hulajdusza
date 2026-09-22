@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
+  html, body { width: 1200px; height: 630px; overflow: hidden; background: #0a0a0c; }
+  .canvas {
+    width: 1200px; height: 630px; position: relative;
+    background:
+      radial-gradient(560px 420px at 84% -8%, rgba(190,240,0,0.14), transparent 60%),
+      radial-gradient(620px 460px at -6% 108%, rgba(52,209,134,0.12), transparent 60%),
+      #0a0a0c;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+  }
+  .grid {
+    position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                       linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(720px 480px at 50% 50%, black 30%, transparent 78%);
+  }
+  .frame {
+    position: absolute; inset: 28px;
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 20px;
+  }
+  .dots { position: absolute; top: 52px; left: 60px; display: flex; gap: 10px; }
+  .dot { width: 11px; height: 11px; border-radius: 999px; }
+  .lockup { display: flex; align-items: center; gap: 26px; z-index: 2; }
+  .emoji {
+    font-size: 148px; line-height: 1; filter: drop-shadow(0 18px 40px rgba(190,240,0,0.16));
+  }
+  .word { font-weight: 800; font-size: 92px; letter-spacing: -0.03em; color: #fff; line-height: 1; }
+  .tagline {
+    margin-top: 34px; font-weight: 500; font-size: 30px; letter-spacing: -0.01em;
+    color: rgba(255,255,255,0.62); z-index: 2;
+  }
+  .tagline b { color: #fff; font-weight: 700; }
+  .footer {
+    position: absolute; bottom: 46px; left: 60px; right: 60px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 20px; color: rgba(255,255,255,0.4); letter-spacing: 0.01em;
+  }
+  .footer .city { display: flex; align-items: center; gap: 8px; }
+  .pin { width: 8px; height: 8px; border-radius: 999px; background: #34d186; }
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <div class="grid"></div>
+    <div class="frame"></div>
+    <div class="dots">
+      <span class="dot" style="background:#bef000"></span>
+      <span class="dot" style="background:#34d186"></span>
+      <span class="dot" style="background:#00a3e2"></span>
+    </div>
+    <div class="lockup">
+      <div class="emoji">😈</div>
+      <div class="word">HULAJDUSZA</div>
+    </div>
+    <div class="tagline"><b>Diabelnie skuteczne</b> zgłoszenia hulajnóg</div>
+    <div class="footer">
+      <span class="city"><span class="pin"></span>Polska</span>
+      <span>hulajdusza.mariuszgorski.pl</span>
+    </div>
+  </div>
+</body>
+</html>

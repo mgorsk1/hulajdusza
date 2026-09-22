@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 512px; height: 512px; overflow: hidden; background: #0a0a0c; }
+  .canvas {
+    width: 512px; height: 512px; position: relative;
+    background:
+      radial-gradient(260px 200px at 82% -6%, rgba(190,240,0,0.24), transparent 60%),
+      radial-gradient(280px 220px at -8% 108%, rgba(52,209,134,0.22), transparent 60%),
+      #0a0a0c;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .emoji {
+    font-size: 336px; line-height: 1;
+    filter: drop-shadow(0 14px 34px rgba(190,240,0,0.22));
+  }
+</style>
+</head>
+<body>
+  <div class="canvas"><div class="emoji">😈</div></div>
+</body>
+</html>
