@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <script src="/theme.js"></script>
+  <title>O co chodzi? – Hulajdusza</title>
+
+  <!-- Favicons -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" href="/favicon-32x32.png" sizes="32x32" type="image/png">
+  <link rel="icon" href="/favicon-16x16.png" sizes="16x16" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="theme-color" content="#0a0a0c">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="sticky top-0 z-50 border-b border-default bg-[hsl(var(--background))]/95 backdrop-blur">
+    <div class="max-w-3xl mx-auto px-6 h-14 flex items-center justify-between">
+      <a href="/" class="text-base font-bold tracking-tight whitespace-nowrap">😈 Hulajdusza</a>
+      <nav class="flex items-center gap-3 whitespace-nowrap">
+        <a href="/" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Zgłoś</a>
+        <a href="/map" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Mapa</a>
+        <a href="/stats" class="text-sm text-muted hover:text-[hsl(var(--foreground))] transition-colors">Statystyki</a>
+        <button type="button" data-theme-toggle class="grid place-items-center w-10 h-10 -mr-2 text-muted hover:text-[hsl(var(--foreground))] transition-colors" aria-label="Zmień motyw"></button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-3xl w-full mx-auto px-6 py-10 space-y-8">
+    <div class="space-y-3 pb-2">
+      <h1 class="text-3xl font-bold tracking-tight">O co chodzi?</h1>
+      <p class="text-sm text-muted leading-relaxed">Hulajnoga stojąca w poprzek chodnika to żenada. Chodniki mamy jakie mamy - rzadko kiedy dość szerokie, żeby dało się je spokojnie ominąć. To zwyczajnie wstyd. Nie urządzamy z tego powodu awantur na klatce schodowej ani nie publikujemy zdjęć w internecie. Po prostu wysyłamy e-mail.</p>
+    </div>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold tracking-tight">1. Nie chodzi o same hulajnogi</h2>
+      <p class="text-sm text-muted leading-relaxed">
+        Hulajnoga na minuty to wygodny środek transportu: szybszy niż autobus, tańszy niż taksówka. Problem jest w tym, gdzie ktoś ją zostawił: w poprzek chodnika, na przejściu dla pieszych, przy wyjściu z klatki, na przystanku. Pięć sekund dłużej i dałoby się to zaparkować porządnie. Nikt jednak tego nie pilnuje, dopóki ktoś nie zgłosi.
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold tracking-tight">2. Chodnik jest dla ludzi, nie dla parkingu</h2>
+      <p class="text-sm text-muted leading-relaxed">
+        Metr chodnika zablokowany hulajnogą przeszkadza każdemu, kto tamtędy idzie: trzeba zejść na jezdnię, zwolnić, obejść szerokim łukiem. Dla kogoś na wózku to ściana. Dla mamy z wózkiem dziecięcym to zjazd na jezdnię. Dla osoby niewidomej z białą laską to hulajnoga, o którą można się mocno poobijać, bo stoi tam, gdzie laska jej nie wyłapie. Dzieje się codziennie w polskich miastach. <strong>Zgłaszając źle zaparkowaną hulajnogę, odblokowujesz komuś kawałek miasta.</strong>
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold tracking-tight">3. Jak to właściwie działa</h2>
+      <p class="text-sm text-muted leading-relaxed">
+        Robisz zdjęcie kodu QR i zdjęcie tego, jak i gdzie hulajnoga stoi. Aplikacja składa z tego wiadomość e-mail i wysyła ją do właściwego operatora (Bolt, Lime albo Dott: aplikacja rozpoznaje go automatycznie z kodu QR). W wiadomości jest dokładna lokalizacja, adres i dowód zdjęciowy. Poprawne parkowanie kosztuje użytkownika 5 sekund więcej, niepoprawne - nawet 300 zł.
+      </p>
+      <p class="text-sm text-muted leading-relaxed font-medium text-[hsl(var(--foreground))]">
+        Dalej to już zadanie operatora: zgodnie z własnym regulaminem może obciążyć karą osobę, która tak zaparkowała, i jednocześnie wysłać kogoś, kto zabierze stamtąd hulajnogę. Jedno zgłoszenie, dwa efekty: chodnik się czyści, a winny dostaje rachunek.
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold tracking-tight">4. Dlaczego kara, a nie apel do sumienia</h2>
+      <p class="text-sm text-muted leading-relaxed">
+        Apele do sumienia rzadko kiedy cokolwiek zmieniają. Kartka „szanujmy się” nikogo jeszcze nie nauczyła parkować. Wiadomość „obciążyliśmy Twoje konto 10–200 zł za pozostawienie pojazdu w niedozwolonym miejscu” działa skuteczniej. Nie musimy nikogo przekonywać do empatii. Wystarczy, że raz zapłaci, żeby następnym razem pomyślał, zanim zostawi hulajnogę na środku przejścia. To nie zemsta, to naturalna konsekwencja zapisana w regulaminie samego operatora. My tylko sprawiamy, że faktycznie zaczyna działać.
+      </p>
+    </section>
+
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold tracking-tight">5. Co zyskujesz</h2>
+      <p class="text-sm text-muted leading-relaxed">
+        Zgłoszenie zajmuje dwie minuty i nie niesie dla Ciebie żadnych konsekwencji (jest anonimowe wobec operatora, patrz <a href="/privacy" class="underline hover:text-[hsl(var(--foreground))] transition-colors">polityka prywatności</a>), a w zamian masz nieco więcej porządku w mieście, w którym mieszkasz. Możesz też sprawdzić <a href="/stats" class="underline hover:text-[hsl(var(--foreground))] transition-colors">statystyki</a>, żeby zobaczyć, ile osób robi to samo co Ty, oraz <a href="/map" class="underline hover:text-[hsl(var(--foreground))] transition-colors">mapę</a>, żeby zobaczyć gdzie.
+      </p>
+    </section>
+
+    <div class="pt-4 border-t border-default">
+      <a href="/" class="btn btn-primary inline-flex w-auto px-6">Zgłoś pierwszą hulajnogę</a>
+    </div>
+  </main>
+
+  <footer class="border-t border-default">
+    <div class="max-w-3xl mx-auto px-6 py-6 text-xs text-muted">
+      <a href="/privacy" class="hover:text-[hsl(var(--foreground))] transition-colors underline">Polityka prywatności</a>
+    </div>
+  </footer>
+</body>
+</html>
