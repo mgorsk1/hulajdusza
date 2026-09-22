@@ -90,7 +90,7 @@ async function resolveStreet(l) {
 function renderLoc() {
   const where = loc?.street === null ? "ustalam adres…" : loc?.street || "adres nieustalony";
   $("loc-start").textContent = loc
-    ? `Lokalizacja: ${where} · ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (±${loc.accuracy} m)`
+    ? `Lokalizacja: ${where} (±${loc.accuracy} m)`
     : "Brak lokalizacji – zezwól na dostęp do GPS (dotknij, by spróbować ponownie).";
 }
 $("loc-start").onclick = () => locate();
