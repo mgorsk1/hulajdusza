@@ -42,14 +42,17 @@ export const OPERATORS: Operator[] = [
     match: "dott\\.com|ridedott|dott\\.app|\\bdott\\b",
     email: "support@ridedott.com",
   },
-  // {
-  //   key: "test",
-  //   name: "Test",
-  //   color: "#ff0000",
-  //   dark: "#ff0000",
-  //   match: "test|testowy|mariusz",
-  //   email: "gorskimariusz13@gmail.com",
-  // },
+  {
+    key: "other",
+    name: "Inny",
+    color: "#9ca3af",
+    dark: "#9ca3af",
+    // "(?!)" nigdy się nie dopasowuje (negative lookahead na pusty ciąg) – operator tylko do ręcznego wyboru
+    // w kroku "Wpisz numer ręcznie", nigdy z automatycznego rozpoznania kodu QR. Do testów; łatwo odfiltrować
+    // i wyczyścić później po key = "other".
+    match: "(?!)",
+    email: "gorskimariusz13@gmail.com",
+  },
 ];
 
 export const operatorByKey = (key: string) => OPERATORS.find((o) => o.key === key);

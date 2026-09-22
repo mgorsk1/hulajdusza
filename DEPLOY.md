@@ -51,7 +51,7 @@ Komenda wypisze blok z `database_id`. **Skopiuj ID** i wklej w `wrangler.jsonc`:
 Załóż tabele w bazie produkcyjnej:
 
 ```bash
-npx wrangler d1 execute hulajdusza --remote --file=schema.sql     # albo: task db:remote
+npx wrangler d1 execute hulajdusza --remote --file=resources/queries/schema.sql     # albo: task db:remote
 ```
 
 Powinno się utworzyć 5 tabel: `reports`, `stats_hourly`, `stats_totals`, `quota_usage`, `reported_scooters`. Sprawdź:
@@ -60,7 +60,7 @@ Powinno się utworzyć 5 tabel: `reports`, `stats_hourly`, `stats_totals`, `quot
 npx wrangler d1 execute hulajdusza --remote --command "SELECT name FROM sqlite_master WHERE type='table'"
 ```
 
-Nie ładuj `seed.sql` na produkcję. To dane testowe tylko do lokalnego developmentu.
+Nie ładuj `resources/queries/seed.sql` na produkcję. To dane testowe tylko do lokalnego developmentu.
 
 ## 3. Turnstile (ochrona przed botami)
 
@@ -308,9 +308,13 @@ Jeśli mail nie dochodzi: w `npx wrangler tail` szukaj `mail failed`. Częste pr
 ## 11. Aktualizacje i baza
 
 - Zmiana kodu: `npx wrangler deploy`.
-- Zmiana schematu (`schema.sql` używa `CREATE TABLE IF NOT EXISTS`, więc bezpiecznie): `npx wrangler d1 execute hulajdusza --remote --file=schema.sql`.
-- Czyszczenie danych testowych (produkcja): `task db:reset:remote` (albo `npx wrangler d1 execute hulajdusza --remote --file=clear.sql`).
+- Zmiana schematu (`resources/queries/schema.sql` używa `CREATE TABLE IF NOT EXISTS`, więc bezpiecznie): `npx wrangler d1 execute hulajdusza --remote --file=resources/queries/schema.sql`.
+- Czyszczenie danych testowych (produkcja): `task db:reset:remote` (albo `npx wrangler d1 execute hulajdusza --remote --file=resources/queries/clear.sql`).
 - Istniejąca baza po dodaniu nowych tabel agregatów: `task db:rebuild-stats:remote` (przelicza statystyki i liczniki limitów z tabeli `reports`).
+- Istniejąca baza po dodaniu kolumny `city` (wsparcie dla wielu miast w statystykach) – w tej kolejności:
+  1. `task db:remote` (dokłada nowe tabele agregatów `stats_city_district` i `stats_totals(kind='city')`, `CREATE TABLE IF NOT EXISTS`, bezpiecznie)
+  2. `task db:migrate-city:remote` (jednorazowo dokłada kolumnę `city` do `reports` i wypełnia ją na `'Warszawa'` dla istniejących wierszy – patrz `resources/queries/migrate-add-city.sql`)
+  3. `task db:rebuild-stats:remote` (dopiero teraz, bo czyta `reports.city` – przed krokiem 2 policzyłby wszystko jako „Nieustalone”)
 - Podgląd danych: `npx wrangler d1 execute hulajdusza --remote --command "SELECT operator, COUNT(*) FROM reports GROUP BY operator"`.
 - Cofnięcie wersji Workera: `npx wrangler rollback`.
 - Historia bazy (D1 Time Travel): `npx wrangler d1 time-travel info hulajdusza`.
@@ -321,7 +325,7 @@ Jeśli mail nie dochodzi: w `npx wrangler tail` szukaj `mail failed`. Częste pr
 |---|---|
 | Widget Turnstile pokazuje błąd (np. 110200) | host nie jest na liście w widgecie (krok 3) albo site key nie pasuje do sekretu |
 | `turnstile_failed` przy wysyłce | zły `TURNSTILE_SECRET` (ustaw ponownie krok 3) |
-| `no such table: ...` | nie wykonano `schema.sql` na bazie `--remote` (krok 2) |
+| `no such table: ...` | nie wykonano `resources/queries/schema.sql` na bazie `--remote` (krok 2) |
 | Zdjęcie ma kod QR, a aplikacja go nie czyta | przeglądarka czyta kod sama: zrób zdjęcie bliżej i ostro, albo użyj „Zeskanuj” / „Wpisz ręcznie” |
 | `mail failed ... 401` | brak lub zły `RESEND_API_KEY` |
 | Mail idzie, ale trafia do spamu | brak rekordów SPF/DKIM lub domena niezweryfikowana |
@@ -341,7 +345,7 @@ Jeśli mail nie dochodzi: w `npx wrangler tail` szukaj `mail failed`. Częste pr
 ## Lista kontrolna
 
 - [ ] `npm install`, `wrangler login`
-- [ ] `d1 create`, `database_id` w `wrangler.jsonc`, `schema.sql` na `--remote`
+- [ ] `d1 create`, `database_id` w `wrangler.jsonc`, `resources/queries/schema.sql` na `--remote`
 - [ ] Turnstile: widget z hostem, `TURNSTILE_SITE_KEY` w pliku, `TURNSTILE_SECRET` jako sekret
 - [ ] `HASH_SECRET` jako sekret (losowe 32 bajty)
 - [ ] `FROM_EMAIL` na własnej domenie

@@ -12,8 +12,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
   <style>
-    /* Dzielnice: 8-stopniowa skala szarości, równe kroki jasności CIELAB (~12 L*), niemal pełny zakres.
-       g1 = największa dzielnica, g8 = „Pozostałe”. */
+    /* Donut "wg miasta": 8-stopniowa skala szarości, równe kroki jasności CIELAB (~12 L*), niemal pełny zakres.
+       g1 = największe miasto, g8 = „Pozostałe”. */
     .viz-root { --g1: #000000; --g2: #202020; --g3: #3a3a3a; --g4: #575757; --g5: #757575; --g6: #949494; --g7: #b5b5b5; --g8: #d7d7d7; }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) .viz-root { --g1: #ffffff; --g2: #dfdfdf; --g3: #c0c0c0; --g4: #a2a2a2; --g5: #858585; --g6: #696969; --g7: #4e4e4e; --g8: #353535; }
@@ -62,7 +62,7 @@
       </span>
     </div>
 
-    <!-- Trzy metryki w jednym rzędzie -->
+    <!-- Trzy metryki w jednym rzędzie – zawsze globalne, wszystkie miasta razem (bez filtra) -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6" aria-label="Kluczowe metryki">
       <article class="p-4 rounded-lg bg-primary text-primary-foreground flex flex-col justify-between min-h-[124px] h-full">
         <p class="text-sm md:text-xs opacity-70">Ostatnie 24 godziny</p>
@@ -86,10 +86,10 @@
       </article>
 
       <article class="p-4 rounded-lg border border-default bg-card flex flex-col justify-between min-h-[124px] h-full">
-        <p class="text-sm md:text-xs text-muted">Najgorsza dzielnica</p>
+        <p class="text-sm md:text-xs text-muted">Najgorsze miasto</p>
         <div class="mt-auto pt-1">
-          <p id="dist-name" class="text-2xl font-bold tracking-tight leading-tight">–</p>
-          <p id="dist-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+          <p id="city-name" class="text-2xl font-bold tracking-tight leading-tight">–</p>
+          <p id="city-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
         </div>
       </article>
     </section>
@@ -110,9 +110,48 @@
       </article>
 
       <article class="p-6 rounded-lg border border-default bg-card">
-        <h2 class="font-semibold">Hulajnogi wg dzielnicy</h2>
+        <h2 class="font-semibold">Hulajnogi wg miasta</h2>
         <p class="text-sm text-muted mb-6">Udział w zgłoszonych hulajnogach</p>
-        <div id="c-dist"></div>
+        <div id="c-city"></div>
+      </article>
+    </section>
+
+    <!-- Statystyki miasta: filtr + 3 metryki lokalne (analogiczne do górnego, globalnego rzędu) + wykres dzielnic -->
+    <section class="space-y-4">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h2 class="text-lg font-semibold tracking-tight">Statystyki miasta</h2>
+        <label class="text-sm">
+          <span class="sr-only">Miasto</span>
+          <select id="city-filter" class="h-9 rounded-md border border-default bg-card px-2 text-sm"></select>
+        </label>
+      </div>
+
+      <!-- Wartości primary (city-total/city-lead-name/dist-name) mają stały odstęp od etykiety (mt-3), nie są
+           dociskane do dołu – dzięki temu są wyjustowane na tej samej wysokości niezależnie od długości etykiety. -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6" aria-label="Metryki wybranego miasta">
+        <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
+          <p class="text-sm md:text-xs text-muted">Liczba zgłoszeń</p>
+          <p id="city-total" class="text-2xl font-bold tracking-tight leading-tight mt-3">–</p>
+          <p id="city-total-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+        </article>
+
+        <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
+          <p class="text-sm md:text-xs text-muted">Lider operatorów</p>
+          <p class="flex items-center gap-2 text-2xl font-bold tracking-tight leading-tight mt-3"><span id="city-lead-dot" class="dot"></span><span id="city-lead-name">–</span></p>
+          <p id="city-lead-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+        </article>
+
+        <article class="p-4 rounded-lg border border-default bg-card min-h-[124px]">
+          <p class="text-sm md:text-xs text-muted">Najgorsza dzielnica</p>
+          <p id="dist-name" class="text-2xl font-bold tracking-tight leading-tight mt-3">–</p>
+          <p id="dist-sub" class="text-sm md:text-xs text-muted mt-1.5"></p>
+        </article>
+      </div>
+
+      <article class="p-6 rounded-lg border border-default bg-card">
+        <h2 class="font-semibold">Hulajnogi wg dzielnicy</h2>
+        <p class="text-sm text-muted mb-6">Liczba zgłoszonych hulajnóg w wybranym mieście</p>
+        <div id="c-district-bars"></div>
       </article>
     </section>
   </main>
@@ -191,14 +230,52 @@
       $("lead-sub").textContent = `${scootersWord(lead.scooters)} · ${Math.round((lead.scooters / total) * 100)}% łącznie`;
     }
 
-    /* ---------- Najgorsza dzielnica (łącznie) ---------- */
-    function worstDistrict() {
-      const rows = data.byDistrict.filter((r) => r.district !== "Nieustalona");
+    /* ---------- Najgorsze miasto (globalnie, wszystkie miasta razem) ---------- */
+    function worstCity() {
+      const rows = [...data.byCity].filter((r) => r.city !== "Nieustalone").sort((a, b) => b.scooters - a.scooters);
       const top = rows[0];
       if (!top) return;
-      const total = data.byDistrict.reduce((s, r) => s + r.scooters, 0);
+      const total = data.byCity.reduce((s, r) => s + r.scooters, 0);
+      $("city-name").textContent = top.city;
+      $("city-sub").textContent = `${scootersWord(top.scooters)} · ${Math.round((top.scooters / total) * 100)}% łącznie`;
+    }
+
+    /* ---------- Hulajnogi w mieście (lokalnie, z udziałem w całości – łącznik z metrykami globalnymi) ---------- */
+    // Metryki miasta pokazują sam procent (bez liczb bezwzględnych) plus krótki, widoczny podpis mianownika
+    // ("wszystkich zgłoszeń" / "w tym mieście"), żeby procent nie wisiał w powietrzu.
+    function pctLine(id, part, whole, caption) {
+      const el = $(id);
+      const pct = !whole ? null : part / whole < 0.01 ? "<1%" : `${Math.round((part / whole) * 100)}%`;
+      el.textContent = pct ? `${pct} ${caption}` : "–";
+    }
+
+    function cityTotalTile() {
+      const row = data.byCity.find((r) => r.city === data.selectedCity);
+      const cityTotal = row?.scooters ?? 0;
+      const grandTotal = data.byCity.reduce((s, r) => s + r.scooters, 0);
+      $("city-total").textContent = cityTotal;
+      pctLine("city-total-sub", cityTotal, grandTotal, "wszystkich zgłoszeń");
+    }
+
+    /* ---------- Lider operatorów (w obrębie wybranego miasta) ---------- */
+    function cityLeaderTile() {
+      const lead = data.operatorsInCity[0];
+      const op = lead && cfg.operators.find((o) => o.key === lead.operator);
+      if (!op) return void (($("city-lead-name").textContent = "–"), ($("city-lead-sub").textContent = ""));
+      const total = data.operatorsInCity.reduce((s, r) => s + r.scooters, 0);
+      $("city-lead-name").textContent = op.name;
+      $("city-lead-dot").style.background = isDark() ? op.dark : op.color;
+      pctLine("city-lead-sub", lead.scooters, total, "w tym mieście");
+    }
+
+    /* ---------- Najgorsza dzielnica (w obrębie wybranego miasta) ---------- */
+    function worstDistrict() {
+      const rows = data.districtsInCity.filter((r) => r.district !== "Nieustalona");
+      const top = rows[0];
+      if (!top) return void (($("dist-name").textContent = "–"), ($("dist-sub").textContent = ""));
+      const total = data.districtsInCity.reduce((s, r) => s + r.scooters, 0);
       $("dist-name").textContent = top.district;
-      $("dist-sub").textContent = `${scootersWord(top.scooters)} · ${Math.round((top.scooters / total) * 100)}% łącznie`;
+      pctLine("dist-sub", top.scooters, total, "w tym mieście");
     }
 
     /* ---------- Donut (udział %) ---------- */
@@ -233,19 +310,57 @@
       donut($("c-op"), rows, "Hulajnogi wg operatora");
     }
 
-    function districtDonut() {
-      const named = data.byDistrict.filter((r) => r.district !== "Nieustalona");
-      const unknown = data.byDistrict.filter((r) => r.district === "Nieustalona").reduce((s, r) => s + r.scooters, 0);
-      const rows = named.slice(0, 7).map((r) => ({ name: r.district, n: r.scooters }));
-      const rest = named.slice(7).reduce((s, r) => s + r.scooters, 0) + unknown;
-      if (rest) rows.push({ name: "Pozostałe", n: rest });
+    function cityDonut() {
+      const rows = [...data.byCity].sort((a, b) => b.scooters - a.scooters).map((r) => ({ name: r.city, n: r.scooters }));
+      const top = rows.slice(0, 7);
+      const rest = rows.slice(7).reduce((s, r) => s + r.n, 0);
+      if (rest) top.push({ name: "Pozostałe", n: rest });
       // 8 poziomów szarości; przy mniejszej liczbie plasterków rozkładamy je równomiernie na całej skali
       const LEVELS = 8;
-      rows.forEach((r, i) => {
-        const level = rows.length === 1 ? 1 : Math.round((i * (LEVELS - 1)) / (rows.length - 1)) + 1;
+      top.forEach((r, i) => {
+        const level = top.length === 1 ? 1 : Math.round((i * (LEVELS - 1)) / (top.length - 1)) + 1;
         r.color = `var(--g${level})`;
       });
-      donut($("c-dist"), rows, "Hulajnogi wg dzielnicy");
+      donut($("c-city"), top, "Hulajnogi wg miasta");
+    }
+
+    /* ---------- Dzielnice wybranego miasta ---------- */
+    function cityFilter() {
+      const sel = $("city-filter");
+      const rows = [...data.byCity].sort((a, b) => b.scooters - a.scooters);
+      sel.innerHTML = rows
+        .map((r) => `<option value="${esc(r.city)}"${r.city === data.selectedCity ? " selected" : ""}>${esc(r.city)}</option>`)
+        .join("");
+      sel.onchange = () => {
+        selectedCity = sel.value;
+        refreshData();
+      };
+    }
+
+    function districtBars() {
+      const el = $("c-district-bars");
+      const rows = [...data.districtsInCity].filter((r) => r.district !== "Nieustalona").sort((a, b) => b.scooters - a.scooters).slice(0, 8);
+      if (!rows.length) return void (el.innerHTML = empty(`Brak danych dla miasta „${esc(data.selectedCity)}”.`));
+
+      const W = el.clientWidth || 600, rowH = 34, thick = 14;
+      const labelW = Math.round(Math.min(140, Math.max(72, W * 0.32)));
+      const valueGap = 10, H = rows.length * rowH;
+      const max = Math.max(...rows.map((r) => r.scooters));
+      const barMaxW = Math.max(20, W - labelW - 40);
+      let s = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Hulajnogi wg dzielnicy w mieście ${esc(data.selectedCity)}">`;
+      rows.forEach((r, i) => {
+        const y = i * rowH, cy = y + rowH / 2;
+        const w = Math.max(thick, Math.round((r.scooters / max) * barMaxW));
+        // Lekko zaokrąglony tylko koniec rosnący (prawy) – tak jak słupki w "Ostatnie 30 dni", tam zaokrąglone od góry
+        const x0 = labelW, y0 = cy - thick / 2, rad = Math.min(2, w / 2);
+        s += `<g data-tip="${esc(`${r.district}: ${scootersWord(r.scooters)}`)}">`;
+        s += `<rect x="0" y="${y}" width="${W}" height="${rowH}" fill="transparent"/>`;
+        s += `<text class="t-fg" x="0" y="${cy + 4}" font-size="12">${esc(r.district)}</text>`;
+        s += `<path class="mark" fill="hsl(var(--foreground))" d="M${x0} ${y0}H${x0 + w - rad}a${rad} ${rad} 0 0 1 ${rad} ${rad}V${y0 + thick - rad}a${rad} ${rad} 0 0 1 ${-rad} ${rad}H${x0}Z"/>`;
+        s += `<text class="t-fg" x="${labelW + w + valueGap}" y="${cy + 4}" font-size="12" font-weight="600">${r.scooters}</text>`;
+        s += `</g>`;
+      });
+      el.innerHTML = s + "</svg>";
     }
 
     /* ---------- Ostatnie 30 dni ---------- */
@@ -284,27 +399,53 @@
     }
 
     const getJson = (u) => fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error(u + " " + r.status); return r.json(); });
+    let selectedCity = "Warszawa";
     function renderAll() {
       metric();
       leader();
-      worstDistrict();
+      worstCity();
       dailyBars();
       operatorDonut();
-      districtDonut();
+      cityDonut();
+      cityFilter();
+      cityTotalTile();
+      cityLeaderTile();
+      worstDistrict();
+      districtBars();
     }
     function refreshData() {
-      return Promise.all([getJson("/api/config"), getJson("/api/stats")]).then(([c, d]) => {
+      return Promise.all([getJson("/api/config"), getJson(`/api/stats?city=${encodeURIComponent(selectedCity)}`)]).then(([c, d]) => {
         cfg = c;
         data = d;
+        selectedCity = data.selectedCity;
         renderAll();
       });
     }
+    // Domyślnie dzielnice pokazujemy dla miasta przeglądającego (jeśli zezwoli na lokalizację i mamy dla niego dane),
+    // w przeciwnym razie zostaje Warszawa. Wybór można potem zmienić filtrem miasta.
+    function detectCity() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { city } = await getJson(`/api/city?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+            if (city && city !== selectedCity && data?.byCity?.some((r) => r.city === city)) {
+              selectedCity = city;
+              refreshData();
+            }
+          } catch {}
+        },
+        () => {},
+        { maximumAge: 300000, timeout: 8000 },
+      );
+    }
     refreshData().then(() => {
+      detectCity();
       addEventListener("themechange", () => { operatorDonut(); leader(); });
       let last = innerWidth, t;
       addEventListener("resize", () => {
         clearTimeout(t);
-        t = setTimeout(() => { if (innerWidth !== last) { last = innerWidth; dailyBars(); } }, 150);
+        t = setTimeout(() => { if (innerWidth !== last) { last = innerWidth; dailyBars(); districtBars(); } }, 150);
       });
       setInterval(refreshData, 60000);
     }).catch((e) => {

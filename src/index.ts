@@ -60,6 +60,7 @@ export default {
       });
     }
     if (pathname === "/api/geocode" && request.method === "GET") return geocode(new URL(request.url));
+    if (pathname === "/api/city" && request.method === "GET") return cityLookup(new URL(request.url));
     if (pathname === "/api/reports" && request.method === "GET") return listReports(env);
     if (pathname === "/api/stats" && request.method === "GET") return cachedStats(request, env, ctx);
     if (pathname === "/api/quota" && request.method === "GET") return json(await quotaState(env), 200, { "cache-control": "no-store" });
@@ -168,9 +169,21 @@ async function geocode(url: URL): Promise<Response> {
   return json(await reverseGeocode(lat, lng), 200, { "cache-control": "public, max-age=3600" });
 }
 
+/**
+ * Samo wykrycie miasta z lokalizacji, BEZ ograniczenia do Warszawy (w odróżnieniu od /api/geocode, które służy
+ * zgłoszeniom). Używane przez stronę statystyk, żeby domyślnie ustawić filtr miasta na to, gdzie jest przeglądający.
+ */
+async function cityLookup(url: URL): Promise<Response> {
+  const lat = Number(Number(url.searchParams.get("lat")).toFixed(4));
+  const lng = Number(Number(url.searchParams.get("lng")).toFixed(4));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json({ error: "bad_request" }, 400);
+  const geo = await reverseGeocode(lat, lng);
+  return json({ city: geo.city }, 200, { "cache-control": "public, max-age=3600" });
+}
+
 async function listReports(env: Env): Promise<Response> {
   const { results } = await env.DB.prepare(
-    "SELECT id, created_at, street, lat, lng, operator, scooter_count FROM reports WHERE created_at >= datetime('now', '-7 days') ORDER BY created_at DESC LIMIT 5000",
+    "SELECT id, created_at, street, city, lat, lng, operator, scooter_count FROM reports WHERE created_at >= datetime('now', '-7 days') ORDER BY created_at DESC LIMIT 5000",
   ).all();
   return json(results, 200, { "cache-control": "public, max-age=60" });
 }
@@ -188,23 +201,26 @@ function warsawOffsetHours(): number {
  * na TTL na lokalizację, (3) cache przeglądarki. TTL=0 wyłącza cache (lokalny dev).
  */
 async function cachedStats(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const url = new URL(request.url);
+  const city = clean(url.searchParams.get("city"), 100) || DEFAULT_CITY;
   const ttl = Number(env.STATS_CACHE_TTL ?? 60);
   if (!ttl) {
-    const res = await stats(env);
+    const res = await stats(env, city);
     res.headers.set("cache-control", "no-store");
     return res;
   }
-  const key = new Request(new URL("/api/stats", request.url).toString());
+  // Klucz z sam. ścieżką + city (a nie całym query stringiem) – jedna wartość cache na miasto, niezależnie od reszty parametrów
+  const key = new Request(new URL(`/api/stats?city=${encodeURIComponent(city)}`, request.url).toString());
   const cache = caches.default;
   const hit = await cache.match(key);
   if (hit) return hit;
-  const res = await stats(env);
+  const res = await stats(env, city);
   res.headers.set("cache-control", `public, max-age=0, s-maxage=${ttl}, must-revalidate`);
   ctx.waitUntil(cache.put(key, res.clone()));
   return res;
 }
 
-async function stats(env: Env): Promise<Response> {
+async function stats(env: Env, city: string): Promise<Response> {
   const now = Date.now();
   const iso = (ms: number) => new Date(now - ms).toISOString();
   const H = 3600000;
@@ -212,10 +228,13 @@ async function stats(env: Env): Promise<Response> {
   const sign = off >= 0 ? "+" : "-";
   const shift = `${sign}${Math.abs(off)} hours`;
 
-  // Jedyna miara: liczba hulajnóg. Czytamy WYŁĄCZNIE agregaty (stats_hourly, stats_totals) – nigdy tabelę reports.
+  // Jedyna miara: liczba hulajnóg. Czytamy WYŁĄCZNIE agregaty (stats_hourly, stats_totals, stats_city_district,
+  // stats_city_operator) – nigdy tabelę reports. `byOperator`, `byDistrict`, `daily` i `last24h` są globalne
+  // (wszystkie miasta razem), tak samo `byCity` (sekcja "Kluczowe metryki" i donut "wg miasta"). `districtsInCity`
+  // i `operatorsInCity` to jedyne części zależne od parametru `city` – zasilają sekcję "Statystyki miasta".
   const hourKey = (msAgo: number) => iso(msAgo).slice(0, 13);
   const cur = hourKey(23 * H); // 24 kubełki godzinowe wliczając bieżący
-  const [last24h, byOperator, byDistrict, daily] = await env.DB.batch([
+  const [last24h, byOperator, byDistrict, byCity, districtsInCity, operatorsInCity, daily] = await env.DB.batch([
     env.DB.prepare(
       `SELECT COALESCE(SUM(CASE WHEN hour >= ?1 THEN scooters END),0) AS scooters,
               COALESCE(SUM(CASE WHEN hour < ?1 THEN scooters END),0) AS previous
@@ -223,6 +242,9 @@ async function stats(env: Env): Promise<Response> {
     ).bind(cur, hourKey(47 * H)),
     env.DB.prepare("SELECT key AS operator, scooters FROM stats_totals WHERE kind = 'operator' ORDER BY scooters DESC"),
     env.DB.prepare("SELECT key AS district, scooters FROM stats_totals WHERE kind = 'district' ORDER BY scooters DESC"),
+    env.DB.prepare("SELECT key AS city, scooters FROM stats_totals WHERE kind = 'city' ORDER BY scooters DESC"),
+    env.DB.prepare("SELECT district, scooters FROM stats_city_district WHERE city = ?1 ORDER BY scooters DESC").bind(city),
+    env.DB.prepare("SELECT operator, scooters FROM stats_city_operator WHERE city = ?1 ORDER BY scooters DESC").bind(city),
     env.DB.prepare(
       `SELECT substr(datetime(hour || ':00:00', ?1), 1, 10) AS day, SUM(scooters) AS scooters
        FROM stats_hourly WHERE hour >= ?2 GROUP BY day ORDER BY day`,
@@ -235,6 +257,10 @@ async function stats(env: Env): Promise<Response> {
       last24h: last24h.results[0] as { scooters: number; previous: number },
       byOperator: byOperator.results,
       byDistrict: byDistrict.results,
+      byCity: byCity.results,
+      selectedCity: city,
+      districtsInCity: districtsInCity.results,
+      operatorsInCity: operatorsInCity.results,
       daily: daily.results,
       today,
     },
@@ -256,10 +282,15 @@ async function verifyTurnstile(token: string, ip: string | null, env: Env): Prom
 interface Geo {
   street: string;
   district: string;
+  city: string;
 }
 
+// Dopóki aplikacja przyjmuje zgłoszenia tylko z Warszawy (inWarsaw), to bezpieczny fallback,
+// gdy Nominatim nie zwróci nazwy miasta. Gotowe pod przyszłe rozszerzenie na inne miasta.
+const DEFAULT_CITY = "Warszawa";
+
 async function reverseGeocode(lat: number, lng: number): Promise<Geo> {
-  const none = { street: "", district: "" };
+  const none = { street: "", district: "", city: DEFAULT_CITY };
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&accept-language=pl&lat=${lat}&lon=${lng}`,
@@ -270,7 +301,8 @@ async function reverseGeocode(lat: number, lng: number): Promise<Geo> {
     const a = data.address ?? {};
     const road = a.road ?? a.pedestrian ?? a.footway ?? a.cycleway ?? a.square ?? a.neighbourhood ?? "";
     const district = (a.city_district ?? a.suburb ?? "").replace(/^dzielnica\s+/i, "").trim();
-    return { street: [road, a.house_number].filter(Boolean).join(" ").trim(), district };
+    const city = (a.city ?? a.town ?? a.village ?? a.municipality ?? DEFAULT_CITY).trim() || DEFAULT_CITY;
+    return { street: [road, a.house_number].filter(Boolean).join(" ").trim(), district, city };
   } catch {
     return none;
   }
@@ -477,6 +509,7 @@ async function createReport(request: Request, env: Env, ctx?: ExecutionContext):
   if (!reserved.ok) return json({ error: reserved.error, needed: r.drafts.length, quota: reserved.quota }, 429);
 
   const district = r.geo.district || "Nieustalona";
+  const city = r.geo.city;
   const hour = new Date().toISOString().slice(0, 13);
   const keepFrom = new Date(Date.now() - 35 * 86400000).toISOString().slice(0, 13);
   const bump = "ON CONFLICT DO UPDATE SET scooters = scooters + excluded.scooters";
@@ -507,11 +540,14 @@ async function createReport(request: Request, env: Env, ctx?: ExecutionContext):
     const count = d.photoIndexes.length;
     await env.DB.batch([
       env.DB.prepare(
-        "INSERT INTO reports (id, street, district, lat, lng, operator, scooter_count) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      ).bind(crypto.randomUUID(), r.street, r.geo.district || null, r.lat, r.lng, d.operator, count),
+        "INSERT INTO reports (id, street, district, city, lat, lng, operator, scooter_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      ).bind(crypto.randomUUID(), r.street, r.geo.district || null, r.geo.city, r.lat, r.lng, d.operator, count),
       env.DB.prepare(`INSERT INTO stats_hourly (hour, operator, district, scooters) VALUES (?, ?, ?, ?) ${bump}`).bind(hour, d.operator, district, count),
       env.DB.prepare(`INSERT INTO stats_totals (kind, key, scooters) VALUES ('operator', ?, ?) ${bump}`).bind(d.operator, count),
       env.DB.prepare(`INSERT INTO stats_totals (kind, key, scooters) VALUES ('district', ?, ?) ${bump}`).bind(district, count),
+      env.DB.prepare(`INSERT INTO stats_totals (kind, key, scooters) VALUES ('city', ?, ?) ${bump}`).bind(city, count),
+      env.DB.prepare(`INSERT INTO stats_city_district (city, district, scooters) VALUES (?, ?, ?) ${bump}`).bind(city, district, count),
+      env.DB.prepare(`INSERT INTO stats_city_operator (city, operator, scooters) VALUES (?, ?, ?) ${bump}`).bind(city, d.operator, count),
       env.DB.prepare("DELETE FROM stats_hourly WHERE hour < ?").bind(keepFrom),
       ...(await Promise.all(d.highlights.ids.map((id) => scooterKey(env, d.operator, id)))).map((k) =>
         env.DB.prepare("INSERT OR IGNORE INTO reported_scooters (key) VALUES (?)").bind(k),

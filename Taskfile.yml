@@ -37,43 +37,54 @@ tasks:
   db:local:
     desc: Zastosuj schemat w lokalnej bazie D1
     cmds:
-      - npx wrangler d1 execute hulajdusza --local --file=schema.sql
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/schema.sql
 
   db:seed:
     desc: Wczytaj przykładowe dane do lokalnej bazy (seed.sql, idempotentne). Nie uruchamiaj przy działającym dev
     cmds:
       - task: db:local
-      - npx wrangler d1 execute hulajdusza --local --file=seed.sql
-      - npx wrangler d1 execute hulajdusza --local --file=rebuild-stats.sql
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/seed.sql
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/rebuild-stats.sql
 
   db:reset:
     desc: Wyczyść lokalną bazę (usuwa wszystkie zgłoszenia, statystyki i limity)
     cmds:
       - task: db:local
-      - npx wrangler d1 execute hulajdusza --local --file=clear.sql
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/clear.sql
 
   db:reset:remote:
     desc: Wyczyść PRODUKCYJNĄ bazę D1 (usuwa wszystkie zgłoszenia, statystyki i limity)
     prompt: Czy na pewno chcesz USUNĄĆ WSZYSTKIE DANE z produkcyjnej bazy D1?
     cmds:
-      - npx wrangler d1 execute hulajdusza --remote --file=clear.sql
+      - npx wrangler d1 execute hulajdusza --remote --file=resources/queries/clear.sql
 
   db:rebuild-stats:
     desc: Odbuduj agregaty statystyk z tabeli reports (lokalnie)
     cmds:
-      - npx wrangler d1 execute hulajdusza --local --file=rebuild-stats.sql
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/rebuild-stats.sql
 
   db:rebuild-stats:remote:
     desc: Odbuduj agregaty statystyk z tabeli reports (produkcja) – backfill po wdrożeniu na istniejącą bazę
     prompt: Przeliczyć agregaty statystyk w produkcyjnej bazie?
     cmds:
-      - npx wrangler d1 execute hulajdusza --remote --file=rebuild-stats.sql
+      - npx wrangler d1 execute hulajdusza --remote --file=resources/queries/rebuild-stats.sql
 
   db:remote:
     desc: Zastosuj schemat w produkcyjnej bazie D1
     prompt: Zmienić schemat produkcyjnej bazy D1?
     cmds:
-      - npx wrangler d1 execute hulajdusza --remote --file=schema.sql
+      - npx wrangler d1 execute hulajdusza --remote --file=resources/queries/schema.sql
+
+  db:migrate-city:
+    desc: "Jednorazowo: dodaj i wypełnij kolumnę city w lokalnej bazie (migrate-add-city.sql)"
+    cmds:
+      - npx wrangler d1 execute hulajdusza --local --file=resources/queries/migrate-add-city.sql
+
+  db:migrate-city:remote:
+    desc: "Jednorazowo: dodaj i wypełnij kolumnę city w PRODUKCYJNEJ bazie (backfill istniejących zgłoszeń na 'Warszawa')"
+    prompt: Dodać kolumnę city do produkcyjnej bazy i wypełnić ją dla istniejących wierszy?
+    cmds:
+      - npx wrangler d1 execute hulajdusza --remote --file=resources/queries/migrate-add-city.sql
 
   db:query:
     desc: "Zapytanie SQL do lokalnej bazy: task db:query -- 'SELECT * FROM reports'"

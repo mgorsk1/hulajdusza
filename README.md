@@ -43,7 +43,7 @@ Aplikacja działa na planie **Workers Free**: odczyt QR jest w przeglądarce, a 
 Istniejąca baza: `task db:remote && task db:rebuild-stats:remote` (backfill agregatów statystyk i liczników limitów).
 
 ## Statystyki bez skanowania bazy
-`/api/stats` czyta tylko agregaty `stats_hourly` i `stats_totals`, aktualizowane przyrostowo w tej samej transakcji D1 co zgłoszenie, plus cache na krawędzi (`STATS_CACHE_TTL`, lokalnie 0).
+`/api/stats` czyta tylko agregaty (`stats_hourly`, `stats_totals`, `stats_city_district`, `stats_city_operator`), aktualizowane przyrostowo w tej samej transakcji D1 co zgłoszenie, plus cache na krawędzi (`STATS_CACHE_TTL`, lokalnie 0). Metryki na górze strony (24 h, lider operatorów, najgorsze miasto) są globalne, wszystkie miasta razem; sekcja „Statystyki miasta” (`?city=`) filtruje tylko siebie – hulajnogi w mieście, lidera operatorów i najgorszą dzielnicę w obrębie wybranego miasta.
 
 ## Operatorzy
 Lista, kolory, wzorce rozpoznawania kodu QR i kontakty: `src/operators.ts`. Hulajnogi Lime z aplikacji Uber to nadal Lime (kod QR Lime).

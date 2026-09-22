@@ -1,5 +1,5 @@
 -- Backfill: dodaje kolumnę `city` do istniejącej tabeli `reports` i wypełnia ją dla wierszy sprzed tej zmiany.
--- Jednorazowe, na bazę bez kolumny `city`. Uruchom: task db:migrate-city:remote (albo :city dla lokalnej bazy).
+-- Jednorazowe, na bazę bez kolumny `city`. Uruchom: task db:migrate-city (lokalnie) albo task db:migrate-city:remote (produkcja).
 --
 -- SQLite (D1) nie zna `ADD COLUMN IF NOT EXISTS`, więc powtórne uruchomienie na bazie, która już ma tę kolumnę,
 -- zakończy się błędem "duplicate column name: city" na pierwszej linii — to nieszkodliwy sygnał, że migracja
